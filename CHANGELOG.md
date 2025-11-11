@@ -27,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Meta/LLaMA: LLaMA 2/3/3.1/4 variants, GPT OSS models
   - Cohere: Command R
 - **New Provider Support**: Mistral, Meta/LLaMA, Cohere (now 9 providers total)
+- **Comprehensive Test Suite**: 70 unit tests with 50% code coverage
+  - `tests/test_options_config.py` - 19 tests for options management
+  - `tests/test_model_execution.py` - 12 tests for model execution and API integration
+  - `tests/test_cli_commands.py` - 30 tests for CLI commands
+  - `tests/conftest.py` - Shared fixtures and mocks
+  - `tests/fixtures/sample_responses.json` - Mock API responses
+- **GitHub Actions CI/CD**: Automated testing and code quality
+  - `.github/workflows/test.yml` - Tests on Python 3.8-3.12
+  - `.github/workflows/lint.yml` - Code formatting (black) and linting (ruff)
+  - Parallel test execution across multiple Python versions
+  - Coverage reporting and validation
+- **Testing Documentation**: Complete guide in `TESTING.md`
+  - How to run tests locally
+  - Test structure and organization
+  - Coverage reports and CI/CD integration
+  - Contributing guidelines for tests
 - Configuration storage at `~/.config/llm-1min/config.json` with XDG standard compliance
 - Option priority hierarchy: CLI flags > per-model config > global defaults > code defaults
 - Comprehensive documentation for advanced features
@@ -36,11 +52,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced `execute()` method to merge options from multiple sources
 - Updated README.md with Options Management section and advanced usage examples
 - Updated MODEL_SELECTION.md with Advanced Features section
-- Improved .gitignore to exclude user configuration files
+- Improved .gitignore to exclude user configuration files and test artifacts
 - Enhanced security documentation with best practices
+- Updated pyproject.toml with test dependencies and pytest configuration
 
 ### Fixed
 - Options now properly validated with pydantic validators
+- Mock configuration in tests properly handles multiple API endpoints
 
 ## [0.1.0] - 2025-11-09
 

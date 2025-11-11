@@ -1,0 +1,133 @@
+{
+  "conversation_creation": {
+    "conversation": {
+      "uuid": "test-conv-uuid-12345",
+      "title": "Test Conversation",
+      "type": "CHAT_WITH_AI",
+      "model": "gpt-4o",
+      "createdAt": "2025-11-10T10:00:00Z",
+      "status": "ACTIVE"
+    }
+  },
+  "api_response_success": {
+    "aiRecord": {
+      "uuid": "test-record-uuid-67890",
+      "userId": "test-user-id",
+      "teamId": "test-team-id",
+      "model": "gpt-4o",
+      "type": "CHAT_WITH_AI",
+      "status": "SUCCESS",
+      "createdAt": "2025-11-10T10:01:00Z",
+      "aiRecordDetail": {
+        "promptObject": {
+          "prompt": "Test prompt"
+        },
+        "resultObject": "This is a test response from the AI model. It demonstrates successful API communication."
+      }
+    }
+  },
+  "api_response_with_web_search": {
+    "aiRecord": {
+      "uuid": "test-record-uuid-web-search",
+      "model": "gpt-4o",
+      "type": "CHAT_WITH_AI",
+      "status": "SUCCESS",
+      "aiRecordDetail": {
+        "promptObject": {
+          "prompt": "What's new in AI?",
+          "webSearch": true,
+          "numOfSite": 5,
+          "maxWord": 1000
+        },
+        "resultObject": "Based on recent web searches across 5 sources, here are the latest developments in AI: [test response with web search results]"
+      }
+    }
+  },
+  "api_response_mixed_context": {
+    "aiRecord": {
+      "uuid": "test-record-uuid-mixed",
+      "model": "claude-4-sonnet",
+      "type": "CHAT_WITH_AI",
+      "status": "SUCCESS",
+      "aiRecordDetail": {
+        "promptObject": {
+          "prompt": "Continue from previous",
+          "isMixed": true
+        },
+        "resultObject": "Building on the previous discussion from GPT-4o, I can add the following insights..."
+      }
+    }
+  },
+  "api_response_code_generator": {
+    "aiRecord": {
+      "uuid": "test-record-uuid-code",
+      "model": "claude-4-sonnet",
+      "type": "CODE_GENERATOR",
+      "status": "SUCCESS",
+      "aiRecordDetail": {
+        "promptObject": {
+          "prompt": "Write a Python function"
+        },
+        "resultObject": "```python\ndef example_function():\n    '''Example generated code'''\n    return 'Hello World'\n```"
+      }
+    }
+  },
+  "api_error_401": {
+    "error": "Unauthorized",
+    "message": "Invalid API key",
+    "statusCode": 401
+  },
+  "api_error_429": {
+    "error": "Too Many Requests",
+    "message": "Rate limit exceeded. Please try again later.",
+    "statusCode": 429
+  },
+  "conversations_list": {
+    "conversations": [
+      {
+        "uuid": "conv-uuid-1",
+        "title": "Test Chat 1",
+        "type": "CHAT_WITH_AI",
+        "model": "gpt-4o",
+        "createdAt": "2025-11-10T09:00:00Z",
+        "status": "ACTIVE"
+      },
+      {
+        "uuid": "conv-uuid-2",
+        "title": "Code Generation Task",
+        "type": "CODE_GENERATOR",
+        "model": "claude-4-sonnet",
+        "createdAt": "2025-11-10T09:30:00Z",
+        "status": "ACTIVE"
+      },
+      {
+        "uuid": "conv-uuid-3",
+        "title": "Research with Sonar",
+        "type": "CHAT_WITH_AI",
+        "model": "sonar",
+        "createdAt": "2025-11-10T10:00:00Z",
+        "status": "ACTIVE"
+      }
+    ]
+  },
+  "conversation_details": {
+    "conversation": {
+      "uuid": "conv-uuid-1",
+      "title": "Test Chat 1",
+      "type": "CHAT_WITH_AI",
+      "model": "gpt-4o",
+      "createdAt": "2025-11-10T09:00:00Z",
+      "status": "ACTIVE",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Hello"
+        },
+        {
+          "role": "assistant",
+          "content": "Hi! How can I help you today?"
+        }
+      ]
+    }
+  }
+}

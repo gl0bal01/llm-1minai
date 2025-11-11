@@ -2,6 +2,8 @@
 
 [![PyPI](https://img.shields.io/pypi/v/llm-1min.svg)](https://pypi.org/project/llm-1min/)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/gl0bal01/llm-1min/blob/main/LICENSE)
+[![Tests](https://github.com/gl0bal01/llm-1min/workflows/Tests/badge.svg)](https://github.com/gl0bal01/llm-1min/actions)
+[![Code Quality](https://github.com/gl0bal01/llm-1min/workflows/Code%20Quality/badge.svg)](https://github.com/gl0bal01/llm-1min/actions)
 
 Plugin for [LLM](https://llm.datasette.io/) adding support for [1min.ai](https://1min.ai) AI models.
 
@@ -324,6 +326,8 @@ python manage_conversations.py export --output my-conversations.json
 - ✅ **Web search**: Enable real-time web search with any model
 - ✅ **Mixed context**: Share conversation context between different models
 - ✅ **Persistent options**: Set default preferences globally or per-model
+- ✅ **Comprehensive test suite**: 70 tests with 50% code coverage
+- ✅ **CI/CD**: GitHub Actions for automated testing on Python 3.8-3.12
 - ✅ Conversation history tracking and management
 - ✅ Specialized code generation mode
 - ✅ Automatic conversation management
@@ -378,15 +382,57 @@ All scripts in this repository follow security best practices:
 
 ```
 llm-1min/
-├── llm_1min.py              # Main plugin implementation (21 KB)
-├── manage_conversations.py  # Conversation management utility (6.6 KB)
-├── test_api.py              # API testing utility (4.4 KB)
+├── llm_1min.py              # Main plugin implementation
+├── manage_conversations.py  # Conversation management utility
+├── test_api.py              # API testing utility
+├── tests/                   # Test suite (70 tests)
+│   ├── test_options_config.py    # Options management tests (19 tests)
+│   ├── test_model_execution.py   # Model execution tests (12 tests)
+│   ├── test_cli_commands.py      # CLI command tests (30 tests)
+│   ├── conftest.py               # Shared test fixtures
+│   └── fixtures/                 # Mock API responses
+├── .github/workflows/       # CI/CD pipelines
+│   ├── test.yml            # Automated testing (Python 3.8-3.12)
+│   └── lint.yml            # Code quality checks
 ├── pyproject.toml          # Package configuration
 ├── README.md               # Main documentation
 ├── MODEL_SELECTION.md      # Comprehensive model guide
+├── TESTING.md              # Testing documentation
+├── CHANGELOG.md            # Version history
 ├── LICENSE                 # Apache 2.0 license
 └── .gitignore             # Git ignore rules
 ```
+
+### Running Tests
+
+This project includes a comprehensive test suite with 70 unit tests covering all major functionality:
+
+```bash
+# Install test dependencies
+pip install -e .[test]
+
+# Run all tests
+pytest tests/ -v
+
+# Run with coverage report
+pytest tests/ -v --cov=llm_1min --cov-report=term-missing
+
+# Run specific test file
+pytest tests/test_options_config.py -v
+
+# Run specific test
+pytest tests/test_options_config.py::TestOptionsConfigSetters::test_set_option_global -v
+```
+
+**Test Coverage:**
+- ✅ 70/70 tests passing (100%)
+- ✅ 50% code coverage
+- ✅ Options configuration management (19 tests)
+- ✅ Model execution and API integration (12 tests)
+- ✅ CLI commands (30 tests)
+- ✅ Error handling and validation (9 tests)
+
+See [TESTING.md](./TESTING.md) for complete testing documentation.
 
 ### Testing the Plugin
 
