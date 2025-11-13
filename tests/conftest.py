@@ -1,6 +1,7 @@
 """
 Shared pytest fixtures for llm-1min tests.
 """
+
 import pytest
 import tempfile
 import json
@@ -31,19 +32,8 @@ def temp_config_file(temp_config_dir):
 def sample_config():
     """Sample configuration data."""
     return {
-        "defaults": {
-            "web_search": True,
-            "num_of_site": 3
-        },
-        "models": {
-            "gpt-4o": {
-                "web_search": True,
-                "num_of_site": 5
-            },
-            "sonar": {
-                "num_of_site": 10
-            }
-        }
+        "defaults": {"web_search": True, "num_of_site": 3},
+        "models": {"gpt-4o": {"web_search": True, "num_of_site": 5}, "sonar": {"num_of_site": 10}},
     }
 
 
@@ -61,11 +51,9 @@ def mock_api_response_success():
             "uuid": "test-uuid-123",
             "status": "SUCCESS",
             "aiRecordDetail": {
-                "promptObject": {
-                    "prompt": "Test prompt"
-                },
-                "resultObject": "This is a test response from the AI model."
-            }
+                "promptObject": {"prompt": "Test prompt"},
+                "resultObject": "This is a test response from the AI model.",
+            },
         }
     }
 
@@ -78,7 +66,7 @@ def mock_conversation_response():
             "uuid": "conv-uuid-456",
             "title": "Test Conversation",
             "type": "CHAT_WITH_AI",
-            "model": "gpt-4o"
+            "model": "gpt-4o",
         }
     }
 
@@ -93,15 +81,15 @@ def mock_conversations_list():
                 "title": "Test Chat 1",
                 "type": "CHAT_WITH_AI",
                 "model": "gpt-4o",
-                "createdAt": "2025-11-10T10:00:00Z"
+                "createdAt": "2025-11-10T10:00:00Z",
             },
             {
                 "uuid": "conv-2",
                 "title": "Test Chat 2",
                 "type": "CODE_GENERATOR",
                 "model": "claude-4-sonnet",
-                "createdAt": "2025-11-10T11:00:00Z"
-            }
+                "createdAt": "2025-11-10T11:00:00Z",
+            },
         ]
     }
 
@@ -126,6 +114,7 @@ def mock_requests(monkeypatch, mock_api_response_success, mock_conversation_resp
     # Create a smart mock that handles both endpoints
     class SmartMockResponse:
         """Mock that returns different responses based on URL."""
+
         def __call__(self, url, **kwargs):
             if "conversations" in url and "features" not in url:
                 return mock_conv_response
@@ -149,16 +138,16 @@ def mock_requests(monkeypatch, mock_api_response_success, mock_conversation_resp
     # Apply monkeypatch
     monkeypatch.setattr("requests.post", mock_post)
     monkeypatch.setattr("requests.delete", mock_delete)
-    monkeypatch.setattr("requests.get", lambda url, **kwargs: Mock(
-        status_code=200,
-        json=lambda: {"conversations": []}
-    ))
+    monkeypatch.setattr(
+        "requests.get",
+        lambda url, **kwargs: Mock(status_code=200, json=lambda: {"conversations": []}),
+    )
 
     return {
         "post": smart_mock,  # Return the smart mock that handles both endpoints
         "delete": mock_delete,
         "response": mock_response,
-        "conv_response": mock_conv_response
+        "conv_response": mock_conv_response,
     }
 
 
@@ -195,6 +184,7 @@ def mock_api_key(monkeypatch):
 def cli_runner():
     """Click CLI test runner."""
     from click.testing import CliRunner
+
     return CliRunner()
 
 
@@ -202,6 +192,7 @@ def cli_runner():
 def reset_conversation_mapping():
     """Reset global conversation mapping before each test."""
     import llm_1min
+
     llm_1min._conversation_mapping.clear()
     yield
     llm_1min._conversation_mapping.clear()

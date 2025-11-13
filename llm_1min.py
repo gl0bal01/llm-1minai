@@ -35,7 +35,7 @@ class OptionsConfig:
             return {"defaults": {}, "models": {}}
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, "r") as f:
                 return json.load(f)
         except:
             return {"defaults": {}, "models": {}}
@@ -44,7 +44,7 @@ class OptionsConfig:
         """Save configuration to file"""
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, 'w') as f:
+            with open(self.config_path, "w") as f:
                 json.dump(config, f, indent=2)
         except Exception as e:
             raise Exception(f"Failed to save config: {e}")
@@ -135,15 +135,12 @@ def clear_conversation(model_id: str, api_key: str, conversation_uuid: str = Non
     # Try to delete from API
     # Common patterns: DELETE /api/conversations/{uuid}
     try:
-        headers = {
-            'API-KEY': api_key,
-            'Content-Type': 'application/json'
-        }
+        headers = {"API-KEY": api_key, "Content-Type": "application/json"}
 
         response = requests.delete(
-            f'https://api.1min.ai/api/conversations/{conversation_uuid}',
+            f"https://api.1min.ai/api/conversations/{conversation_uuid}",
             headers=headers,
-            timeout=30
+            timeout=30,
         )
 
         # Success codes: 200, 204, or 404 (already deleted)
@@ -165,15 +162,10 @@ def clear_all_conversations(api_key: str) -> int:
     count = 0
     for key, uuid in list(_conversation_mapping.items()):
         try:
-            headers = {
-                'API-KEY': api_key,
-                'Content-Type': 'application/json'
-            }
+            headers = {"API-KEY": api_key, "Content-Type": "application/json"}
 
             response = requests.delete(
-                f'https://api.1min.ai/api/conversations/{uuid}',
-                headers=headers,
-                timeout=30
+                f"https://api.1min.ai/api/conversations/{uuid}", headers=headers, timeout=30
             )
 
             if response.status_code in [200, 204, 404]:
@@ -220,14 +212,18 @@ def register_models(register):
     # Anthropic Models
     register(OneMinModel("1min/claude-3-haiku", "claude-3-haiku-20240307", "Claude 3 Haiku"))
     register(OneMinModel("1min/claude-3-5-haiku", "claude-3-5-haiku-20241022", "Claude 3.5 Haiku"))
-    register(OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet"))
+    register(
+        OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet")
+    )
     register(OneMinModel("1min/claude-4-sonnet", "claude-sonnet-4-20250514", "Claude 4 Sonnet"))
     register(OneMinModel("1min/claude-4-opus", "claude-opus-4-20250514", "Claude 4 Opus"))
 
     # Google Models
     register(OneMinModel("1min/gemini-1.5-pro", "gemini-1.5-pro", "Gemini 1.5 Pro"))
     register(OneMinModel("1min/gemini-2.0-flash", "gemini-2.0-flash", "Gemini 2.0 Flash"))
-    register(OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite"))
+    register(
+        OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite")
+    )
     register(OneMinModel("1min/gemini-2.5-flash", "gemini-2.5-flash", "Gemini 2.5 Flash"))
     register(OneMinModel("1min/gemini-2.5-pro", "gemini-2.5-pro", "Gemini 2.5 Pro"))
 
@@ -240,8 +236,16 @@ def register_models(register):
     register(OneMinModel("1min/grok-3", "grok-3", "Grok 3"))
     register(OneMinModel("1min/grok-3-mini", "grok-3-mini", "Grok 3 Mini"))
     register(OneMinModel("1min/grok-4", "grok-4-0709", "Grok 4"))
-    register(OneMinModel("1min/grok-4-fast-non-reasoning", "grok-4-fast-non-reasoning", "Grok 4 Fast Non-Reasoning"))
-    register(OneMinModel("1min/grok-4-fast-reasoning", "grok-4-fast-reasoning", "Grok 4 Fast Reasoning"))
+    register(
+        OneMinModel(
+            "1min/grok-4-fast-non-reasoning",
+            "grok-4-fast-non-reasoning",
+            "Grok 4 Fast Non-Reasoning",
+        )
+    )
+    register(
+        OneMinModel("1min/grok-4-fast-reasoning", "grok-4-fast-reasoning", "Grok 4 Fast Reasoning")
+    )
     register(OneMinModel("1min/grok-code-fast-1", "grok-code-fast-1", "Grok Code Fast 1"))
 
     # Mistral Models
@@ -256,9 +260,13 @@ def register_models(register):
     # Replicate/Meta Models
     register(OneMinModel("1min/llama-2-70b", "meta/llama-2-70b-chat", "LLaMA 2 70b"))
     register(OneMinModel("1min/llama-3-70b", "meta/meta-llama-3-70b-instruct", "LLaMA 3 70b"))
-    register(OneMinModel("1min/llama-3.1-405b", "meta/meta-llama-3.1-405b-instruct", "LLaMA 3.1 405b"))
+    register(
+        OneMinModel("1min/llama-3.1-405b", "meta/meta-llama-3.1-405b-instruct", "LLaMA 3.1 405b")
+    )
     register(OneMinModel("1min/llama-4-scout", "meta/llama-4-scout-instruct", "LLaMA 4 Scout"))
-    register(OneMinModel("1min/llama-4-maverick", "meta/llama-4-maverick-instruct", "LLaMA 4 Maverick"))
+    register(
+        OneMinModel("1min/llama-4-maverick", "meta/llama-4-maverick-instruct", "LLaMA 4 Maverick")
+    )
     register(OneMinModel("1min/gpt-oss-20b", "openai/gpt-oss-20b", "GPT OSS 20b"))
     register(OneMinModel("1min/gpt-oss-120b", "openai/gpt-oss-120b", "GPT OSS 120b"))
 
@@ -293,27 +301,23 @@ class OneMinModel(llm.Model):
     class Options(llm.Options):
         conversation_type: Optional[str] = Field(
             description="Type of conversation: CHAT_WITH_AI or CODE_GENERATOR",
-            default="CHAT_WITH_AI"
+            default="CHAT_WITH_AI",
         )
 
         # Web search options
         web_search: Optional[bool] = Field(
-            description="Enable web search for real-time information",
-            default=False
+            description="Enable web search for real-time information", default=False
         )
         num_of_site: Optional[int] = Field(
-            description="Number of sites to search when web_search is enabled (1-10)",
-            default=3
+            description="Number of sites to search when web_search is enabled (1-10)", default=3
         )
         max_word: Optional[int] = Field(
-            description="Maximum words to extract from web search results",
-            default=500
+            description="Maximum words to extract from web search results", default=500
         )
 
         # Mixed model context
         is_mixed: Optional[bool] = Field(
-            description="Mix context between different models in conversation",
-            default=False
+            description="Mix context between different models in conversation", default=False
         )
 
         @field_validator("conversation_type")
@@ -359,7 +363,7 @@ class OneMinModel(llm.Model):
         """
         # Generate a unique key for this conversation
         conv_key = f"{self.model_id}"
-        if conversation and hasattr(conversation, 'id'):
+        if conversation and hasattr(conversation, "id"):
             conv_key = f"{conversation.id}_{self.model_id}"
 
         # Check if we already have a 1min.ai conversation for this
@@ -369,27 +373,21 @@ class OneMinModel(llm.Model):
         # Create a new 1min.ai conversation
         conversation_type = prompt.options.conversation_type or "CHAT_WITH_AI"
 
-        headers = {
-            'API-KEY': key,
-            'Content-Type': 'application/json'
-        }
+        headers = {"API-KEY": key, "Content-Type": "application/json"}
 
         payload = {
-            'title': f'LLM Chat - {self.display_name}',
-            'type': conversation_type,
-            'model': self.api_model_id  # Use actual API model ID, not LLM ID
+            "title": f"LLM Chat - {self.display_name}",
+            "type": conversation_type,
+            "model": self.api_model_id,  # Use actual API model ID, not LLM ID
         }
 
         try:
             response = requests.post(
-                'https://api.1min.ai/api/conversations',
-                headers=headers,
-                json=payload,
-                timeout=30
+                "https://api.1min.ai/api/conversations", headers=headers, json=payload, timeout=30
             )
             response.raise_for_status()
 
-            conversation_uuid = response.json()['conversation']['uuid']
+            conversation_uuid = response.json()["conversation"]["uuid"]
             _conversation_mapping[conv_key] = conversation_uuid
 
             return conversation_uuid
@@ -412,15 +410,15 @@ class OneMinModel(llm.Model):
         # CLI options override everything (only if explicitly set)
         cli_options = {}
         if prompt.options.conversation_type != "CHAT_WITH_AI":  # If not default
-            cli_options['conversation_type'] = prompt.options.conversation_type
+            cli_options["conversation_type"] = prompt.options.conversation_type
         if prompt.options.web_search is not False:  # If not default
-            cli_options['web_search'] = prompt.options.web_search
+            cli_options["web_search"] = prompt.options.web_search
         if prompt.options.num_of_site != 3:  # If not default
-            cli_options['num_of_site'] = prompt.options.num_of_site
+            cli_options["num_of_site"] = prompt.options.num_of_site
         if prompt.options.max_word != 500:  # If not default
-            cli_options['max_word'] = prompt.options.max_word
+            cli_options["max_word"] = prompt.options.max_word
         if prompt.options.is_mixed is not False:  # If not default
-            cli_options['is_mixed'] = prompt.options.is_mixed
+            cli_options["is_mixed"] = prompt.options.is_mixed
 
         # Apply CLI overrides
         merged_options.update(cli_options)
@@ -429,40 +427,39 @@ class OneMinModel(llm.Model):
         conversation_uuid = self.get_or_create_conversation(key, conversation, prompt)
 
         # Determine conversation type
-        conversation_type = merged_options.get('conversation_type', prompt.options.conversation_type)
+        conversation_type = merged_options.get(
+            "conversation_type", prompt.options.conversation_type
+        )
 
         # Build promptObject with all options
-        prompt_object = {'prompt': prompt.prompt}
+        prompt_object = {"prompt": prompt.prompt}
 
         # Add optional parameters if enabled
-        if merged_options.get('web_search', False):
-            prompt_object['webSearch'] = True
-            prompt_object['numOfSite'] = merged_options.get('num_of_site', 3)
-            prompt_object['maxWord'] = merged_options.get('max_word', 500)
+        if merged_options.get("web_search", False):
+            prompt_object["webSearch"] = True
+            prompt_object["numOfSite"] = merged_options.get("num_of_site", 3)
+            prompt_object["maxWord"] = merged_options.get("max_word", 500)
 
-        if merged_options.get('is_mixed', False):
-            prompt_object['isMixed'] = True
+        if merged_options.get("is_mixed", False):
+            prompt_object["isMixed"] = True
 
         # Build request payload for 1min.ai /api/features endpoint
-        headers = {
-            'API-KEY': key,
-            'Content-Type': 'application/json'
-        }
+        headers = {"API-KEY": key, "Content-Type": "application/json"}
 
         payload = {
-            'type': conversation_type,
-            'model': self.api_model_id,  # Use actual API model ID, not LLM ID
-            'conversationId': conversation_uuid,
-            'promptObject': prompt_object
+            "type": conversation_type,
+            "model": self.api_model_id,  # Use actual API model ID, not LLM ID
+            "conversationId": conversation_uuid,
+            "promptObject": prompt_object,
         }
 
         # Make the API request
         try:
             api_response = requests.post(
-                'https://api.1min.ai/api/features',
+                "https://api.1min.ai/api/features",
                 headers=headers,
                 json=payload,
-                timeout=60  # Longer timeout for AI responses
+                timeout=60,  # Longer timeout for AI responses
             )
             api_response.raise_for_status()
 
@@ -472,14 +469,12 @@ class OneMinModel(llm.Model):
             # Try to extract the result from the response
             result_object = None
 
-            if (result_data.get('aiRecord', {})
-                .get('aiRecordDetail', {})
-                .get('resultObject')):
-                result_object = result_data['aiRecord']['aiRecordDetail']['resultObject']
-            elif result_data.get('result', {}).get('response'):
-                result_object = result_data['result']['response']
-            elif 'data' in result_data:
-                result_object = result_data['data']
+            if result_data.get("aiRecord", {}).get("aiRecordDetail", {}).get("resultObject"):
+                result_object = result_data["aiRecord"]["aiRecordDetail"]["resultObject"]
+            elif result_data.get("result", {}).get("response"):
+                result_object = result_data["result"]["response"]
+            elif "data" in result_data:
+                result_object = result_data["data"]
             else:
                 # Fallback: stringify the whole response
                 result_object = result_data
@@ -535,43 +530,40 @@ def register_commands(cli):
             ("1min/o1-mini", "O1 Mini", "OpenAI reasoning model"),
             ("1min/o3-mini", "O3 Mini", "Reasoning-focused OpenAI model"),
             ("1min/o4-mini", "O4 Mini", "Latest reasoning-focused model"),
-
             # Anthropic Models
             ("1min/claude-3-haiku", "Claude 3 Haiku", "Fast and compact Anthropic model"),
             ("1min/claude-3-5-haiku", "Claude 3.5 Haiku", "Enhanced fast Anthropic model"),
             ("1min/claude-3-7-sonnet", "Claude 3.7 Sonnet", "Advanced Anthropic model"),
             ("1min/claude-4-sonnet", "Claude 4 Sonnet", "Latest Anthropic Sonnet model"),
             ("1min/claude-4-opus", "Claude 4 Opus", "Most powerful Anthropic model"),
-
             # Google Models
             ("1min/gemini-1.5-pro", "Gemini 1.5 Pro", "Google's advanced model"),
             ("1min/gemini-2.0-flash", "Gemini 2.0 Flash", "Fast Gemini 2.0 variant"),
             ("1min/gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite", "Compact Gemini 2.0 Flash"),
             ("1min/gemini-2.5-flash", "Gemini 2.5 Flash", "Latest fast Gemini model"),
             ("1min/gemini-2.5-pro", "Gemini 2.5 Pro", "Latest Gemini Pro model"),
-
             # DeepSeek Models
             ("1min/deepseek-chat", "DeepSeek Chat", "DeepSeek conversational model"),
             ("1min/deepseek-r1", "DeepSeek R1", "DeepSeek reasoning model"),
-
             # xAI Models
             ("1min/grok-2", "Grok 2", "xAI's Grok model"),
             ("1min/grok-3", "Grok 3", "Latest xAI Grok model"),
             ("1min/grok-3-mini", "Grok 3 Mini", "Compact Grok 3 variant"),
             ("1min/grok-4", "Grok 4", "Newest xAI Grok model"),
-            ("1min/grok-4-fast-non-reasoning", "Grok 4 Fast Non-Reasoning", "Fast Grok 4 without reasoning"),
+            (
+                "1min/grok-4-fast-non-reasoning",
+                "Grok 4 Fast Non-Reasoning",
+                "Fast Grok 4 without reasoning",
+            ),
             ("1min/grok-4-fast-reasoning", "Grok 4 Fast Reasoning", "Fast Grok 4 with reasoning"),
             ("1min/grok-code-fast-1", "Grok Code Fast 1", "xAI's fast code generation model"),
-
             # Mistral Models
             ("1min/open-mistral-nemo", "Mistral Open Nemo", "Open Mistral model"),
             ("1min/mistral-small-latest", "Mistral Small", "Compact Mistral model"),
             ("1min/mistral-large-latest", "Mistral Large 2", "Most capable Mistral model"),
             ("1min/pixtral-12b", "Mistral Pixtral 12B", "Mistral vision model"),
-
             # Cohere Models
             ("1min/command-r", "Command R", "Cohere's Command R model"),
-
             # Meta/LLaMA Models
             ("1min/llama-2-70b", "LLaMA 2 70b", "Meta's LLaMA 2 70B model"),
             ("1min/llama-3-70b", "LLaMA 3 70b", "Meta's LLaMA 3 70B model"),
@@ -580,7 +572,6 @@ def register_commands(cli):
             ("1min/llama-4-maverick", "LLaMA 4 Maverick", "LLaMA 4 Maverick variant"),
             ("1min/gpt-oss-20b", "GPT OSS 20b", "Open-source GPT 20B model"),
             ("1min/gpt-oss-120b", "GPT OSS 120b", "Open-source GPT 120B model"),
-
             # Perplexity Models
             ("1min/sonar", "Sonar", "Perplexity web-aware model"),
             ("1min/sonar-reasoning", "Sonar Reasoning", "Perplexity with reasoning capabilities"),
@@ -594,9 +585,9 @@ def register_commands(cli):
             click.echo()
 
         click.echo("Usage:")
-        click.echo("  llm -m <model-id> \"your prompt\"")
+        click.echo('  llm -m <model-id> "your prompt"')
         click.echo("\nExample:")
-        click.echo("  llm -m 1min/gpt-4o-mini \"Explain Python decorators\"")
+        click.echo('  llm -m 1min/gpt-4o-mini "Explain Python decorators"')
 
     @onemin_group.command(name="conversations")
     def list_conversations():
@@ -612,12 +603,12 @@ def register_commands(cli):
             click.echo(f"  {key}: {uuid}")
 
     @onemin_group.command(name="clear")
-    @click.option('--model', '-m', help='Model ID to clear conversation for')
-    @click.option('--all', 'clear_all', is_flag=True, help='Clear all conversations')
+    @click.option("--model", "-m", help="Model ID to clear conversation for")
+    @click.option("--all", "clear_all", is_flag=True, help="Clear all conversations")
     def clear_conversations_cmd(model, clear_all):
         """Clear 1min.ai conversation(s)"""
         # Get API key from environment or LLM's key storage
-        api_key = os.environ.get('ONEMIN_API_KEY')
+        api_key = os.environ.get("ONEMIN_API_KEY")
 
         if not api_key:
             # Try to get from LLM's key storage
@@ -626,7 +617,10 @@ def register_commands(cli):
                 temp_model = OneMinModel("1min/gpt-4o-mini", "gpt-4o-mini", "GPT-4o Mini")
                 api_key = temp_model.get_key()
             except:
-                click.echo("Error: No API key found. Set ONEMIN_API_KEY or use 'llm keys set 1min'", err=True)
+                click.echo(
+                    "Error: No API key found. Set ONEMIN_API_KEY or use 'llm keys set 1min'",
+                    err=True,
+                )
                 return
 
         if clear_all:
@@ -647,9 +641,11 @@ def register_commands(cli):
         pass
 
     @options_group.command(name="set")
-    @click.argument('key')
-    @click.argument('value')
-    @click.option('--model', '-m', help='Set option for specific model (e.g., gpt-4o, claude-4-sonnet)')
+    @click.argument("key")
+    @click.argument("value")
+    @click.option(
+        "--model", "-m", help="Set option for specific model (e.g., gpt-4o, claude-4-sonnet)"
+    )
     def set_option(key, value, model):
         """Set an option (global or per-model)
 
@@ -659,9 +655,9 @@ def register_commands(cli):
           llm 1min options set num_of_site 5
         """
         # Convert string value to appropriate type
-        if value.lower() == 'true':
+        if value.lower() == "true":
             value = True
-        elif value.lower() == 'false':
+        elif value.lower() == "false":
             value = False
         elif value.isdigit():
             value = int(value)
@@ -676,8 +672,8 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="get")
-    @click.argument('key')
-    @click.option('--model', '-m', help='Get option for specific model')
+    @click.argument("key")
+    @click.option("--model", "-m", help="Get option for specific model")
     def get_option(key, model):
         """Get an option value
 
@@ -702,7 +698,7 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="list")
-    @click.option('--model', '-m', help='List options for specific model')
+    @click.option("--model", "-m", help="List options for specific model")
     def list_options(model):
         """List all options
 
@@ -743,8 +739,8 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="unset")
-    @click.argument('key')
-    @click.option('--model', '-m', help='Unset option for specific model')
+    @click.argument("key")
+    @click.option("--model", "-m", help="Unset option for specific model")
     def unset_option(key, model):
         """Remove an option
 
@@ -781,7 +777,7 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="export")
-    @click.option('--output', '-o', help='Output file (default: stdout)')
+    @click.option("--output", "-o", help="Output file (default: stdout)")
     def export_options(output):
         """Export options configuration to JSON
 
@@ -794,7 +790,7 @@ def register_commands(cli):
             json_str = json.dumps(config, indent=2)
 
             if output:
-                with open(output, 'w') as f:
+                with open(output, "w") as f:
                     f.write(json_str)
                 click.echo(f"Exported options to {output}")
             else:
@@ -803,7 +799,7 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="import")
-    @click.argument('file', type=click.Path(exists=True))
+    @click.argument("file", type=click.Path(exists=True))
     def import_options(file):
         """Import options configuration from JSON file
 
@@ -811,7 +807,7 @@ def register_commands(cli):
           llm 1min options import my-config.json
         """
         try:
-            with open(file, 'r') as f:
+            with open(file, "r") as f:
                 config = json.load(f)
 
             # Validate structure

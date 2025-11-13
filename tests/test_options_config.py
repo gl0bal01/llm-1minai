@@ -1,6 +1,7 @@
 """
 Tests for OptionsConfig class - persistent configuration management.
 """
+
 import pytest
 import json
 from pathlib import Path
@@ -34,14 +35,14 @@ class TestOptionsConfigLoadSave:
         assert mock_config_path.exists()
 
         # Verify content
-        with open(mock_config_path, 'r') as f:
+        with open(mock_config_path, "r") as f:
             loaded = json.load(f)
         assert loaded == sample_config
 
     def test_load_existing_file_returns_content(self, mock_config_path, sample_config):
         """Test loading existing config file."""
         # Write config file
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()
@@ -51,7 +52,7 @@ class TestOptionsConfigLoadSave:
     def test_load_corrupted_file_returns_empty_config(self, mock_config_path):
         """Test loading corrupted JSON returns empty config."""
         # Write invalid JSON
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             f.write("{invalid json")
 
         config = llm_1min.OptionsConfig()
@@ -71,7 +72,7 @@ class TestOptionsConfigGetters:
     def test_get_defaults_with_data(self, mock_config_path, sample_config):
         """Test get_defaults with existing data."""
         # Save sample config
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()
@@ -87,7 +88,7 @@ class TestOptionsConfigGetters:
     def test_get_model_options_existing_model(self, mock_config_path, sample_config):
         """Test get_model_options for existing model."""
         # Save sample config
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()
@@ -154,7 +155,7 @@ class TestOptionsConfigUnset:
     def test_unset_global_option(self, mock_config_path, sample_config):
         """Test unsetting a global option."""
         # Save sample config
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()
@@ -173,7 +174,7 @@ class TestOptionsConfigUnset:
     def test_unset_model_option(self, mock_config_path, sample_config):
         """Test unsetting a per-model option."""
         # Save sample config
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()
@@ -199,7 +200,7 @@ class TestOptionsConfigReset:
     def test_reset_clears_all_options(self, mock_config_path, sample_config):
         """Test reset clears all configuration."""
         # Save sample config
-        with open(mock_config_path, 'w') as f:
+        with open(mock_config_path, "w") as f:
             json.dump(sample_config, f)
 
         config = llm_1min.OptionsConfig()

@@ -69,7 +69,7 @@ addopts = [
     "--cov=llm_1min",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=49"
+    "--cov-fail-under=50"
 ]
 
 [tool.coverage.run]

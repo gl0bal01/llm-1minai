@@ -29,10 +29,7 @@ class ConversationManager:
     def __init__(self, api_key: str):
         self.api_key = api_key
         self.base_url = "https://api.1min.ai"
-        self.headers = {
-            'API-KEY': api_key,
-            'Content-Type': 'application/json'
-        }
+        self.headers = {"API-KEY": api_key, "Content-Type": "application/json"}
 
     def list_conversations(self) -> List[Dict]:
         """
@@ -43,12 +40,10 @@ class ConversationManager:
         """
         try:
             response = requests.get(
-                f"{self.base_url}/api/conversations",
-                headers=self.headers,
-                timeout=30
+                f"{self.base_url}/api/conversations", headers=self.headers, timeout=30
             )
             response.raise_for_status()
-            return response.json().get('conversations', [])
+            return response.json().get("conversations", [])
         except requests.exceptions.RequestException as e:
             print(f"Error listing conversations: {e}", file=sys.stderr)
             return []
@@ -67,7 +62,7 @@ class ConversationManager:
             response = requests.get(
                 f"{self.base_url}/api/conversations/{conversation_uuid}",
                 headers=self.headers,
-                timeout=30
+                timeout=30,
             )
             response.raise_for_status()
             return response.json()
@@ -89,7 +84,7 @@ class ConversationManager:
             response = requests.delete(
                 f"{self.base_url}/api/conversations/{conversation_uuid}",
                 headers=self.headers,
-                timeout=30
+                timeout=30,
             )
             return response.status_code in [200, 204, 404]
         except requests.exceptions.RequestException as e:
@@ -107,7 +102,7 @@ class ConversationManager:
         count = 0
 
         for conv in conversations:
-            uuid = conv.get('uuid')
+            uuid = conv.get("uuid")
             if uuid and self.delete_conversation(uuid):
                 count += 1
 
@@ -125,44 +120,28 @@ class ConversationManager:
         if output_file is None:
             output_file = "conversations.json"
 
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             json.dump(conversations, f, indent=2)
 
         print(f"Exported {len(conversations)} conversation(s) to {output_file}")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Manage 1min.ai conversations"
-    )
+    parser = argparse.ArgumentParser(description="Manage 1min.ai conversations")
     parser.add_argument(
-        'command',
-        choices=['list', 'get', 'delete', 'clear', 'export'],
-        help='Command to execute'
+        "command", choices=["list", "get", "delete", "clear", "export"], help="Command to execute"
     )
+    parser.add_argument("uuid", nargs="?", help="Conversation UUID (for get/delete commands)")
     parser.add_argument(
-        'uuid',
-        nargs='?',
-        help='Conversation UUID (for get/delete commands)'
+        "--all", action="store_true", help="Apply to all conversations (for clear command)"
     )
-    parser.add_argument(
-        '--all',
-        action='store_true',
-        help='Apply to all conversations (for clear command)'
-    )
-    parser.add_argument(
-        '--output', '-o',
-        help='Output file for export command'
-    )
-    parser.add_argument(
-        '--api-key',
-        help='1min.ai API key (or set ONEMIN_API_KEY env var)'
-    )
+    parser.add_argument("--output", "-o", help="Output file for export command")
+    parser.add_argument("--api-key", help="1min.ai API key (or set ONEMIN_API_KEY env var)")
 
     args = parser.parse_args()
 
     # Get API key
-    api_key = args.api_key or os.environ.get('ONEMIN_API_KEY')
+    api_key = args.api_key or os.environ.get("ONEMIN_API_KEY")
     if not api_key:
         print("Error: API key required. Set ONEMIN_API_KEY or use --api-key", file=sys.stderr)
         sys.exit(1)
@@ -170,7 +149,7 @@ def main():
     manager = ConversationManager(api_key)
 
     # Execute command
-    if args.command == 'list':
+    if args.command == "list":
         conversations = manager.list_conversations()
         if not conversations:
             print("No conversations found")
@@ -184,7 +163,7 @@ def main():
                 print(f"  Created: {conv.get('createdAt')}")
                 print()
 
-    elif args.command == 'get':
+    elif args.command == "get":
         if not args.uuid:
             print("Error: UUID required for 'get' command", file=sys.stderr)
             sys.exit(1)
@@ -196,7 +175,7 @@ def main():
             print(f"Conversation {args.uuid} not found", file=sys.stderr)
             sys.exit(1)
 
-    elif args.command == 'delete':
+    elif args.command == "delete":
         if not args.uuid:
             print("Error: UUID required for 'delete' command", file=sys.stderr)
             sys.exit(1)
@@ -207,7 +186,7 @@ def main():
             print(f"Failed to delete conversation {args.uuid}", file=sys.stderr)
             sys.exit(1)
 
-    elif args.command == 'clear':
+    elif args.command == "clear":
         if not args.all:
             print("Error: Use --all flag to confirm clearing all conversations", file=sys.stderr)
             sys.exit(1)
@@ -215,9 +194,9 @@ def main():
         count = manager.clear_all_conversations()
         print(f"Cleared {count} conversation(s)")
 
-    elif args.command == 'export':
+    elif args.command == "export":
         manager.export_conversations(args.output)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

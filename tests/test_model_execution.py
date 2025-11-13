@@ -1,6 +1,7 @@
 """
 Tests for OneMinModel execution and option merging.
 """
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import llm_1min
@@ -31,7 +32,7 @@ class TestOneMinModelInitialization:
 class TestOneMinModelExecution:
     """Test OneMinModel execute method."""
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_basic_execution_without_options(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test basic model execution with default options."""
         mock_get_key.return_value = "test-api-key"
@@ -39,17 +40,14 @@ class TestOneMinModelExecution:
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
         # Execute
-        result = list(model.execute(
-            prompt=mock_llm_prompt,
-            stream=False,
-            response=Mock(),
-            conversation=None
-        ))
+        result = list(
+            model.execute(prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None)
+        )
 
         assert len(result) == 1
         assert "test response" in result[0].lower()
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_execution_with_web_search(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test execution with web search enabled."""
         mock_get_key.return_value = "test-api-key"
@@ -60,26 +58,25 @@ class TestOneMinModelExecution:
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
         # Capture the API call
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify web search params were included
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if 'features' in call[0][0]][0]
-            payload = features_call[1]['json']
+            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            payload = features_call[1]["json"]
 
-            assert payload['promptObject']['webSearch'] is True
-            assert payload['promptObject']['numOfSite'] == 5
-            assert payload['promptObject']['maxWord'] == 1000
+            assert payload["promptObject"]["webSearch"] is True
+            assert payload["promptObject"]["numOfSite"] == 5
+            assert payload["promptObject"]["maxWord"] == 1000
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_execution_with_mixed_context(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test execution with mixed context enabled."""
         mock_get_key.return_value = "test-api-key"
@@ -88,24 +85,23 @@ class TestOneMinModelExecution:
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
         # Capture the API call
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify is_mixed was included
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if 'features' in call[0][0]][0]
-            payload = features_call[1]['json']
+            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            payload = features_call[1]["json"]
 
-            assert payload['promptObject']['isMixed'] is True
+            assert payload["promptObject"]["isMixed"] is True
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_execution_with_code_generator_type(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test execution with CODE_GENERATOR conversation type."""
         mock_get_key.return_value = "test-api-key"
@@ -114,29 +110,34 @@ class TestOneMinModelExecution:
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
         # Capture the API call
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify conversation type
             call_args = mock_post.call_args_list
-            conv_call = [call for call in call_args if 'conversations' in call[0][0] and 'features' not in call[0][0]][0]
-            conv_payload = conv_call[1]['json']
+            conv_call = [
+                call
+                for call in call_args
+                if "conversations" in call[0][0] and "features" not in call[0][0]
+            ][0]
+            conv_payload = conv_call[1]["json"]
 
-            assert conv_payload['type'] == "CODE_GENERATOR"
+            assert conv_payload["type"] == "CODE_GENERATOR"
 
 
 class TestOptionPriorityMerging:
     """Test option priority merging (CLI > per-model > global > defaults)."""
 
-    @patch('llm_1min.OneMinModel.get_key')
-    def test_cli_options_override_config(self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path):
+    @patch("llm_1min.OneMinModel.get_key")
+    def test_cli_options_override_config(
+        self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path
+    ):
         """Test that CLI options override config options."""
         mock_get_key.return_value = "test-api-key"
 
@@ -149,25 +150,26 @@ class TestOptionPriorityMerging:
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify CLI value was used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if 'features' in call[0][0]][0]
-            payload = features_call[1]['json']
+            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            payload = features_call[1]["json"]
 
-            assert payload['promptObject']['webSearch'] is True
+            assert payload["promptObject"]["webSearch"] is True
 
-    @patch('llm_1min.OneMinModel.get_key')
-    def test_per_model_options_override_global(self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path):
+    @patch("llm_1min.OneMinModel.get_key")
+    def test_per_model_options_override_global(
+        self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path
+    ):
         """Test that per-model options override global defaults."""
         mock_get_key.return_value = "test-api-key"
 
@@ -179,26 +181,27 @@ class TestOptionPriorityMerging:
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify per-model value was used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if 'features' in call[0][0]][0]
-            payload = features_call[1]['json']
+            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            payload = features_call[1]["json"]
 
-            assert payload['promptObject']['webSearch'] is True
-            assert payload['promptObject']['numOfSite'] == 10  # Per-model value
+            assert payload["promptObject"]["webSearch"] is True
+            assert payload["promptObject"]["numOfSite"] == 10  # Per-model value
 
-    @patch('llm_1min.OneMinModel.get_key')
-    def test_global_defaults_used_when_no_overrides(self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path):
+    @patch("llm_1min.OneMinModel.get_key")
+    def test_global_defaults_used_when_no_overrides(
+        self, mock_get_key, mock_requests, mock_llm_prompt, mock_config_path
+    ):
         """Test that global defaults are used when no overrides exist."""
         mock_get_key.return_value = "test-api-key"
 
@@ -209,94 +212,102 @@ class TestOptionPriorityMerging:
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Verify global values were used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if 'features' in call[0][0]][0]
-            payload = features_call[1]['json']
+            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            payload = features_call[1]["json"]
 
-            assert payload['promptObject']['webSearch'] is True
-            assert payload['promptObject']['numOfSite'] == 7
+            assert payload["promptObject"]["webSearch"] is True
+            assert payload["promptObject"]["numOfSite"] == 7
 
 
 class TestConversationManagement:
     """Test conversation creation and reuse."""
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_conversation_creation(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test that conversation is created on first request."""
         mock_get_key.return_value = "test-api-key"
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
             # First call - should create conversation
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=None
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                )
+            )
 
             # Check conversation was created
             assert len(llm_1min._conversation_mapping) > 0
 
-    @patch('llm_1min.OneMinModel.get_key')
-    def test_conversation_reuse(self, mock_get_key, mock_requests, mock_llm_prompt, mock_llm_conversation):
+    @patch("llm_1min.OneMinModel.get_key")
+    def test_conversation_reuse(
+        self, mock_get_key, mock_requests, mock_llm_prompt, mock_llm_conversation
+    ):
         """Test that existing conversation is reused."""
         mock_get_key.return_value = "test-api-key"
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
-            mock_post.side_effect = mock_requests['post']
+        with patch("requests.post") as mock_post:
+            mock_post.side_effect = mock_requests["post"]
 
             # First call
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=mock_llm_conversation
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt,
+                    stream=False,
+                    response=Mock(),
+                    conversation=mock_llm_conversation,
+                )
+            )
 
             # Get conversation UUID
-            first_uuid = llm_1min._conversation_mapping.get(f"{mock_llm_conversation.id}_1min/gpt-4o")
+            first_uuid = llm_1min._conversation_mapping.get(
+                f"{mock_llm_conversation.id}_1min/gpt-4o"
+            )
 
             # Second call - should reuse conversation
-            list(model.execute(
-                prompt=mock_llm_prompt,
-                stream=False,
-                response=Mock(),
-                conversation=mock_llm_conversation
-            ))
+            list(
+                model.execute(
+                    prompt=mock_llm_prompt,
+                    stream=False,
+                    response=Mock(),
+                    conversation=mock_llm_conversation,
+                )
+            )
 
             # Verify same UUID is used
-            second_uuid = llm_1min._conversation_mapping.get(f"{mock_llm_conversation.id}_1min/gpt-4o")
+            second_uuid = llm_1min._conversation_mapping.get(
+                f"{mock_llm_conversation.id}_1min/gpt-4o"
+            )
             assert first_uuid == second_uuid
 
 
 class TestErrorHandling:
     """Test error handling in model execution."""
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_authentication_error_401(self, mock_get_key, mock_llm_prompt):
         """Test handling of 401 authentication error."""
         mock_get_key.return_value = "invalid-key"
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
+        with patch("requests.post") as mock_post:
             # Mock 401 error
             mock_response = Mock()
             mock_response.status_code = 401
@@ -304,21 +315,20 @@ class TestErrorHandling:
             mock_post.return_value = mock_response
 
             with pytest.raises(Exception):
-                list(model.execute(
-                    prompt=mock_llm_prompt,
-                    stream=False,
-                    response=Mock(),
-                    conversation=None
-                ))
+                list(
+                    model.execute(
+                        prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                    )
+                )
 
-    @patch('llm_1min.OneMinModel.get_key')
+    @patch("llm_1min.OneMinModel.get_key")
     def test_rate_limit_error_429(self, mock_get_key, mock_llm_prompt):
         """Test handling of 429 rate limit error."""
         mock_get_key.return_value = "test-api-key"
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
-        with patch('requests.post') as mock_post:
+        with patch("requests.post") as mock_post:
             # Mock 429 error
             mock_response = Mock()
             mock_response.status_code = 429
@@ -326,12 +336,11 @@ class TestErrorHandling:
             mock_post.return_value = mock_response
 
             with pytest.raises(Exception):
-                list(model.execute(
-                    prompt=mock_llm_prompt,
-                    stream=False,
-                    response=Mock(),
-                    conversation=None
-                ))
+                list(
+                    model.execute(
+                        prompt=mock_llm_prompt, stream=False, response=Mock(), conversation=None
+                    )
+                )
 
 
 class TestOptionsValidation:

@@ -36,7 +36,7 @@ jobs:
 
     - name: Check coverage threshold
       run: |
-        coverage report --fail-under=49
+        coverage report --fail-under=50
 
     - name: Upload coverage reports
       if: matrix.python-version == '3.12'

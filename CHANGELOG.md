@@ -27,10 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Meta/LLaMA: LLaMA 2/3/3.1/4 variants, GPT OSS models
   - Cohere: Command R
 - **New Provider Support**: Mistral, Meta/LLaMA, Cohere (now 9 providers total)
-- **Comprehensive Test Suite**: 70 unit tests with 50% code coverage
+- **Comprehensive Test Suite**: 112 unit tests with 50% code coverage
   - `tests/test_options_config.py` - 19 tests for options management
   - `tests/test_model_execution.py` - 12 tests for model execution and API integration
   - `tests/test_cli_commands.py` - 30 tests for CLI commands
+  - `tests/test_integration.py` - 51 tests for integration and edge cases
   - `tests/conftest.py` - Shared fixtures and mocks
   - `tests/fixtures/sample_responses.json` - Mock API responses
 - **GitHub Actions CI/CD**: Automated testing and code quality

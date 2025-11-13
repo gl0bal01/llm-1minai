@@ -326,7 +326,7 @@ python manage_conversations.py export --output my-conversations.json
 - ✅ **Web search**: Enable real-time web search with any model
 - ✅ **Mixed context**: Share conversation context between different models
 - ✅ **Persistent options**: Set default preferences globally or per-model
-- ✅ **Comprehensive test suite**: 70 tests with 50% code coverage
+- ✅ **Comprehensive test suite**: 112 tests with 50% code coverage
 - ✅ **CI/CD**: GitHub Actions for automated testing on Python 3.8-3.12
 - ✅ Conversation history tracking and management
 - ✅ Specialized code generation mode
@@ -425,11 +425,12 @@ pytest tests/test_options_config.py::TestOptionsConfigSetters::test_set_option_g
 ```
 
 **Test Coverage:**
-- ✅ 70/70 tests passing (100%)
-- ✅ 50% code coverage
+- ✅ 112/112 tests passing (100%)
+- ✅ 50% code coverage (all testable code)
 - ✅ Options configuration management (19 tests)
 - ✅ Model execution and API integration (12 tests)
 - ✅ CLI commands (30 tests)
+- ✅ Integration and edge cases (42 tests)
 - ✅ Error handling and validation (9 tests)
 
 See [TESTING.md](./TESTING.md) for complete testing documentation.

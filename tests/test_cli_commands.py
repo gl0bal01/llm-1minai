@@ -1,6 +1,7 @@
 """
 Tests for CLI commands (llm 1min ...).
 """
+
 import pytest
 from click.testing import CliRunner
 from unittest.mock import Mock, patch, MagicMock
@@ -14,7 +15,7 @@ def get_cli():
     cli = MagicMock()
     llm_1min.register_commands(cli)
     # Return the registered 1min group
-    return cli.group.call_args[1]['name'], cli.group()
+    return cli.group.call_args[1]["name"], cli.group()
 
 
 class TestModelsCommand:
@@ -42,7 +43,7 @@ class TestModelsCommand:
             "1min/claude-4-sonnet",
             "1min/gemini-2.5-pro",
             "1min/grok-4",
-            "1min/deepseek-r1"
+            "1min/deepseek-r1",
         ]
 
         # The models are defined in the list_models function
@@ -75,7 +76,7 @@ class TestConversationsCommand:
 class TestClearCommand:
     """Test 'llm 1min clear' command."""
 
-    @patch('llm_1min.clear_conversation')
+    @patch("llm_1min.clear_conversation")
     def test_clear_specific_model(self, mock_clear):
         """Test clearing conversation for specific model."""
         mock_clear.return_value = True
@@ -84,7 +85,7 @@ class TestClearCommand:
         assert result is True
         mock_clear.assert_called_once()
 
-    @patch('llm_1min.clear_all_conversations')
+    @patch("llm_1min.clear_all_conversations")
     def test_clear_all_conversations(self, mock_clear_all):
         """Test clearing all conversations."""
         mock_clear_all.return_value = 3
@@ -282,12 +283,12 @@ class TestOptionsImportCommand:
         """Test importing configuration from JSON file."""
         # Create temp JSON file
         json_file = tmp_path / "config.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(sample_config, f)
 
         # Import
         config = llm_1min.OptionsConfig()
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             imported_data = json.load(f)
 
         config.save(imported_data)
@@ -300,11 +301,11 @@ class TestOptionsImportCommand:
         """Test that import validates JSON structure."""
         # Create invalid JSON (not a dict)
         json_file = tmp_path / "invalid.json"
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             json.dump(["not", "a", "dict"], f)
 
         # Import should validate
-        with open(json_file, 'r') as f:
+        with open(json_file, "r") as f:
             data = json.load(f)
 
         assert not isinstance(data, dict) or "defaults" in data or "models" in data
@@ -366,7 +367,7 @@ class TestOptionsIntegrationWorkflow:
 class TestConversationFunctions:
     """Test conversation management functions."""
 
-    @patch('requests.delete')
+    @patch("requests.delete")
     def test_clear_conversation_success(self, mock_delete):
         """Test successful conversation clearing."""
         mock_delete.return_value = Mock(status_code=204)
@@ -374,7 +375,7 @@ class TestConversationFunctions:
         result = llm_1min.clear_conversation("gpt-4o", "test-api-key", "conv-uuid-123")
         assert result is True
 
-    @patch('requests.delete')
+    @patch("requests.delete")
     def test_clear_conversation_not_found(self, mock_delete):
         """Test clearing non-existent conversation."""
         mock_delete.return_value = Mock(status_code=404)
@@ -382,7 +383,7 @@ class TestConversationFunctions:
         result = llm_1min.clear_conversation("gpt-4o", "test-api-key", "nonexistent-uuid")
         assert result is True  # 404 is considered success (already deleted)
 
-    @patch('requests.delete')
+    @patch("requests.delete")
     def test_clear_all_conversations(self, mock_delete):
         """Test clearing all conversations."""
         mock_delete.return_value = Mock(status_code=204)
