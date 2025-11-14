@@ -148,7 +148,7 @@ See [README.md](README.md) for contribution guidelines.
 
 ## Links
 
-- [GitHub Repository](https://github.com/gl0bal01/llm-1min)
-- [PyPI Package](https://pypi.org/project/llm-1min/)
+- [GitHub Repository](https://github.com/gl0bal01/llm-1minai)
+- [PyPI Package](https://pypi.org/project/llm-1minai/)
 - [1min.ai](https://1min.ai)
 - [LLM Documentation](https://llm.datasette.io/)

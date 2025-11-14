@@ -1,5 +1,5 @@
 [project]
-name = "llm-1min"
+name = "llm-1minai"
 version = "0.2.0"
 description = "LLM plugin providing access to 66+ AI models through 1min.ai API with web search, mixed context, and persistent options"
 readme = "README.md"
@@ -42,11 +42,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/gl0bal01/llm-1min"
-Repository = "https://github.com/gl0bal01/llm-1min"
-Documentation = "https://github.com/gl0bal01/llm-1min#readme"
-Changelog = "https://github.com/gl0bal01/llm-1min/blob/main/CHANGELOG.md"
-"Issue Tracker" = "https://github.com/gl0bal01/llm-1min/issues"
+Homepage = "https://github.com/gl0bal01/llm-1minai"
+Repository = "https://github.com/gl0bal01/llm-1minai"
+Documentation = "https://github.com/gl0bal01/llm-1minai#readme"
+Changelog = "https://github.com/gl0bal01/llm-1minai/blob/main/CHANGELOG.md"
+"Issue Tracker" = "https://github.com/gl0bal01/llm-1minai/issues"
 "1min.ai" = "https://docs.1min.ai"
 
 [project.entry-points.llm]

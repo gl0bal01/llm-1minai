@@ -158,8 +158,8 @@ def test_cli_options_override_config():
 
 Add to README.md:
 ```markdown
-[![Tests](https://github.com/gl0bal01/llm-1min/workflows/Tests/badge.svg)](https://github.com/gl0bal01/llm-1min/actions)
-[![Coverage](https://img.shields.io/badge/coverage-80%25-green)](https://github.com/gl0bal01/llm-1min)
+[![Tests](https://github.com/gl0bal01/llm-1minai/workflows/Tests/badge.svg)](https://github.com/gl0bal01/llm-1minai/actions)
+[![Coverage](https://img.shields.io/badge/coverage-80%25-green)](https://github.com/gl0bal01/llm-1minai)
 ```
 
 ## Test Coverage Analysis

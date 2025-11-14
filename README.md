@@ -1,9 +1,9 @@
-# llm-1min
+# llm-1minai
 
-[![PyPI](https://img.shields.io/pypi/v/llm-1min.svg)](https://pypi.org/project/llm-1min/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/gl0bal01/llm-1min/blob/main/LICENSE)
-[![Tests](https://github.com/gl0bal01/llm-1min/workflows/Tests/badge.svg)](https://github.com/gl0bal01/llm-1min/actions)
-[![Code Quality](https://github.com/gl0bal01/llm-1min/workflows/Code%20Quality/badge.svg)](https://github.com/gl0bal01/llm-1min/actions)
+[![PyPI](https://img.shields.io/pypi/v/llm-1minai.svg)](https://pypi.org/project/llm-1minai/)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/gl0bal01/llm-1minai/blob/main/LICENSE)
+[![Tests](https://github.com/gl0bal01/llm-1minai/workflows/Tests/badge.svg)](https://github.com/gl0bal01/llm-1minai/actions)
+[![Code Quality](https://github.com/gl0bal01/llm-1minai/workflows/Code%20Quality/badge.svg)](https://github.com/gl0bal01/llm-1minai/actions)
 
 Plugin for [LLM](https://llm.datasette.io/) adding support for [1min.ai](https://1min.ai) AI models.
 
@@ -14,14 +14,14 @@ Access **66+ AI models** through a single API: GPT-5, GPT-4, Claude 4 Opus, Clau
 Install this plugin in the same environment as LLM:
 
 ```bash
-llm install llm-1min
+llm install llm-1minai
 ```
 
 Or install from source for development:
 
 ```bash
-git clone https://github.com/gl0bal01/llm-1min
-cd llm-1min
+git clone https://github.com/gl0bal01/llm-1minai
+cd llm-1minai
 llm install -e .
 ```
 
