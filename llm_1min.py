@@ -321,13 +321,15 @@ class OneMinModel(llm.Model):
         )
 
         @field_validator("conversation_type")
-        def validate_conversation_type(self, conv_type):
+        @classmethod
+        def validate_conversation_type(cls, conv_type):
             if conv_type not in ["CHAT_WITH_AI", "CODE_GENERATOR"]:
                 raise ValueError("conversation_type must be CHAT_WITH_AI or CODE_GENERATOR")
             return conv_type
 
         @field_validator("num_of_site")
-        def validate_num_of_site(self, value):
+        @classmethod
+        def validate_num_of_site(cls, value):
             if value < 1 or value > 10:
                 raise ValueError("num_of_site must be between 1 and 10")
             return value
