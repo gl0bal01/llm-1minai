@@ -1,12 +1,12 @@
+import json
+import os
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+import click
 import llm
 import requests
-from typing import Optional, Dict, Any
 from pydantic import Field, field_validator
-import os
-import json
-import click
-from pathlib import Path
-
 
 # Store mapping of LLM conversation IDs to 1min.ai conversation UUIDs
 _conversation_mapping = {}
@@ -23,7 +23,7 @@ class OptionsConfig:
             try:
                 config_dir.mkdir(parents=True, exist_ok=True)
                 self.config_path = config_dir / "config.json"
-            except:
+            except OSError:
                 # Fallback to home directory
                 self.config_path = Path.home() / ".llm-1min.json"
         else:
@@ -35,9 +35,9 @@ class OptionsConfig:
             return {"defaults": {}, "models": {}}
 
         try:
-            with open(self.config_path, "r") as f:
+            with open(self.config_path) as f:
                 return json.load(f)
-        except:
+        except Exception:
             return {"defaults": {}, "models": {}}
 
     def save(self, config: Dict[str, Any]) -> None:
@@ -145,7 +145,7 @@ def clear_conversation(model_id: str, api_key: str, conversation_uuid: str = Non
 
         # Success codes: 200, 204, or 404 (already deleted)
         return response.status_code in [200, 204, 404]
-    except:
+    except requests.RequestException:
         return False
 
 
@@ -171,7 +171,7 @@ def clear_all_conversations(api_key: str) -> int:
             if response.status_code in [200, 204, 404]:
                 del _conversation_mapping[key]
                 count += 1
-        except:
+        except Exception:
             continue
 
     return count
@@ -321,13 +321,13 @@ class OneMinModel(llm.Model):
         )
 
         @field_validator("conversation_type")
-        def validate_conversation_type(cls, conv_type):
+        def validate_conversation_type(self, conv_type):
             if conv_type not in ["CHAT_WITH_AI", "CODE_GENERATOR"]:
                 raise ValueError("conversation_type must be CHAT_WITH_AI or CODE_GENERATOR")
             return conv_type
 
         @field_validator("num_of_site")
-        def validate_num_of_site(cls, value):
+        def validate_num_of_site(self, value):
             if value < 1 or value > 10:
                 raise ValueError("num_of_site must be between 1 and 10")
             return value
@@ -616,7 +616,7 @@ def register_commands(cli):
                 # This is a bit hacky but works
                 temp_model = OneMinModel("1min/gpt-4o-mini", "gpt-4o-mini", "GPT-4o Mini")
                 api_key = temp_model.get_key()
-            except:
+            except Exception:
                 click.echo(
                     "Error: No API key found. Set ONEMIN_API_KEY or use 'llm keys set 1min'",
                     err=True,
@@ -807,7 +807,7 @@ def register_commands(cli):
           llm 1min options import my-config.json
         """
         try:
-            with open(file, "r") as f:
+            with open(file) as f:
                 config = json.load(f)
 
             # Validate structure

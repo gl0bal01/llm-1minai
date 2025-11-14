@@ -2,9 +2,8 @@
 Tests for OptionsConfig class - persistent configuration management.
 """
 
-import pytest
 import json
-from pathlib import Path
+
 import llm_1min
 
 
@@ -35,7 +34,7 @@ class TestOptionsConfigLoadSave:
         assert mock_config_path.exists()
 
         # Verify content
-        with open(mock_config_path, "r") as f:
+        with open(mock_config_path) as f:
             loaded = json.load(f)
         assert loaded == sample_config
 

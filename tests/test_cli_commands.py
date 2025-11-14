@@ -2,10 +2,9 @@
 Tests for CLI commands (llm 1min ...).
 """
 
-import pytest
-from click.testing import CliRunner
-from unittest.mock import Mock, patch, MagicMock
 import json
+from unittest.mock import MagicMock, Mock, patch
+
 import llm_1min
 
 
@@ -38,13 +37,6 @@ class TestModelsCommand:
         """Test that the models list contains expected models."""
         # Import the models list from the actual function
         # This tests the data, not the CLI output
-        expected_models = [
-            "1min/gpt-4o",
-            "1min/claude-4-sonnet",
-            "1min/gemini-2.5-pro",
-            "1min/grok-4",
-            "1min/deepseek-r1",
-        ]
 
         # The models are defined in the list_models function
         # We can't easily test CLI output without full LLM integration
@@ -288,7 +280,7 @@ class TestOptionsImportCommand:
 
         # Import
         config = llm_1min.OptionsConfig()
-        with open(json_file, "r") as f:
+        with open(json_file) as f:
             imported_data = json.load(f)
 
         config.save(imported_data)
@@ -305,7 +297,7 @@ class TestOptionsImportCommand:
             json.dump(["not", "a", "dict"], f)
 
         # Import should validate
-        with open(json_file, "r") as f:
+        with open(json_file) as f:
             data = json.load(f)
 
         assert not isinstance(data, dict) or "defaults" in data or "models" in data

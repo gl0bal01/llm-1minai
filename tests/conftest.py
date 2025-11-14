@@ -2,13 +2,11 @@
 Shared pytest fixtures for llm-1min tests.
 """
 
-import pytest
-import tempfile
-import json
-from pathlib import Path
-from unittest.mock import Mock, MagicMock
 import sys
-import os
+from pathlib import Path
+from unittest.mock import Mock
+
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -97,7 +95,6 @@ def mock_conversations_list():
 @pytest.fixture
 def mock_requests(monkeypatch, mock_api_response_success, mock_conversation_response):
     """Mock requests library for API calls."""
-    import requests
 
     # Mock response object for API calls
     mock_response = Mock()
@@ -209,7 +206,6 @@ def mock_config_path(tmp_path, monkeypatch):
     config_path = config_dir / "config.json"
 
     # Patch OptionsConfig to use temp path
-    original_init = llm_1min.OptionsConfig.__init__
 
     def patched_init(self):
         self.config_path = config_path

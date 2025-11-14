@@ -15,12 +15,13 @@ Usage:
     python manage_conversations.py export
 """
 
+import argparse
+import json
 import os
 import sys
-import json
+from typing import Dict, List, Optional
+
 import requests
-import argparse
-from typing import List, Dict, Optional
 
 
 class ConversationManager:

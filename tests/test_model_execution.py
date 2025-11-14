@@ -2,10 +2,11 @@
 Tests for OneMinModel execution and option merging.
 """
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+
 import llm_1min
-import llm
 
 
 class TestOneMinModelInitialization:

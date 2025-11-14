@@ -3,12 +3,11 @@ Integration tests for llm-1min plugin.
 Tests CLI command execution, conversation management, and edge cases.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-import sys
-import os
-from pathlib import Path
 import json
+import os
+import sys
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -21,8 +20,6 @@ class TestCLICommandInvocation:
 
     def test_models_command_function(self):
         """Test the models command function directly."""
-        from click.testing import CliRunner
-        import click
 
         # Call the function that backs the models command
         # This will test the actual implementation
