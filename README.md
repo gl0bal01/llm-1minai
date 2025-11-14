@@ -11,18 +11,45 @@ Access **66+ AI models** through a single API: GPT-5, GPT-4, Claude 4 Opus, Clau
 
 ## Installation
 
+### Using LLM's Plugin Manager (Recommended)
+
 Install this plugin in the same environment as LLM:
 
 ```bash
 llm install llm-1minai
 ```
 
-Or install from source for development:
+### Using pipx
+
+If you installed LLM with pipx, inject the plugin into the LLM environment:
+
+```bash
+pipx inject llm llm-1minai
+```
+
+Or install both LLM and the plugin with pipx:
+
+```bash
+pipx install llm
+pipx inject llm llm-1minai
+```
+
+### From Source (Development)
+
+Install from source for development:
 
 ```bash
 git clone https://github.com/gl0bal01/llm-1minai
 cd llm-1minai
 llm install -e .
+```
+
+Or with pipx:
+
+```bash
+git clone https://github.com/gl0bal01/llm-1minai
+cd llm-1minai
+pipx inject llm -e .
 ```
 
 ## Configuration
