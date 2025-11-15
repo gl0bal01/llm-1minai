@@ -146,6 +146,24 @@ llm -m 1min/claude-3-5-haiku "Quick question"
 llm -m 1min/gemini-2.5-flash "Fast response needed"
 ```
 
+### Debug Mode (Troubleshooting)
+
+See exactly what's being sent to the API:
+
+```bash
+# Enable debug to see all options and API payload
+llm -m 1min/gpt-4o -o debug true "test prompt"
+
+# Or use environment variable
+LLM_1MIN_DEBUG=1 llm -m 1min/gpt-4o "test prompt"
+
+# See all available options for any model
+llm models --options | grep -A 8 "1min/gpt-4o"
+```
+
+**Note**: The `-d` flag is already used by LLM for database operations, so debug uses `-o debug true`.
+For more details, see [DEBUG_USAGE.md](DEBUG_USAGE.md)
+
 ### Conversation Mode
 
 Continue a conversation with context:
@@ -171,6 +189,12 @@ llm -m 1min/claude-4-sonnet \
   "Create a REST API with FastAPI"
 ```
 
+```bash
+llm -m 1min/grok-code-fast-1 \
+  -o conversation_type CODE_GENERATOR \
+  "Create a simple REST API with Go"
+```
+
 ### Advanced Options
 
 #### Available Options
@@ -180,6 +204,9 @@ llm -m 1min/claude-4-sonnet \
 - **num_of_site**: Number of sites to search when web_search is enabled (1-10, default: 3)
 - **max_word**: Maximum words from web search results (default: 500)
 - **is_mixed**: Mix context between different models (true/false, default: false)
+- **debug**: Show detailed API request information (true/false, default: false)
+  - Use: `-o debug true` (Note: `-d` is taken by LLM's database option)
+  - See: [DEBUG_USAGE.md](DEBUG_USAGE.md) for details
 
 #### One-Time Usage (CLI Flags)
 
@@ -198,6 +225,15 @@ llm -m 1min/claude-4-sonnet \
 # Mix context between models
 llm -m 1min/gpt-4o -o is_mixed true "Start analysis"
 llm -m 1min/claude-4-opus -o is_mixed true "Continue from previous"
+
+# Debug mode - see what's being sent to the API
+llm -m 1min/gpt-4o -o debug true "test prompt"
+
+# Alternative: environment variable
+LLM_1MIN_DEBUG=1 llm -m 1min/gpt-4o "test prompt"
+
+# Or set as default (useful for troubleshooting)
+llm 1min options set debug true
 ```
 
 #### Persistent Configuration
@@ -533,6 +569,29 @@ python test_api.py
 
 - Ensure you're using the exact model ID from the Available Models list
 - Check 1min.ai documentation for model availability
+
+### Debugging API Requests
+
+To see exactly what's being sent to the API:
+
+```bash
+# Use debug option
+llm -m 1min/gpt-4o -o debug true "your prompt"
+
+# Or use environment variable
+LLM_1MIN_DEBUG=1 llm -m 1min/gpt-4o "your prompt"
+```
+
+This will show:
+- Options loaded from config files
+- Options passed via CLI
+- Final merged options
+- Complete API payload being sent
+
+Useful for troubleshooting:
+- Why web_search isn't working as expected
+- Which options are being applied
+- Configuration conflicts between global and per-model settings
 
 ## Contributing
 

@@ -212,18 +212,15 @@ def register_models(register):
     # Anthropic Models
     register(OneMinModel("1min/claude-3-haiku", "claude-3-haiku-20240307", "Claude 3 Haiku"))
     register(OneMinModel("1min/claude-3-5-haiku", "claude-3-5-haiku-20241022", "Claude 3.5 Haiku"))
-    register(
-        OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet")
-    )
+    register(OneMinModel("1min/claude-4-5-haiku", "claude-4-5-haiku-20251001", "Claude 4.5 Haiku"))
+    register(OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet"))
     register(OneMinModel("1min/claude-4-sonnet", "claude-sonnet-4-20250514", "Claude 4 Sonnet"))
     register(OneMinModel("1min/claude-4-opus", "claude-opus-4-20250514", "Claude 4 Opus"))
 
     # Google Models
     register(OneMinModel("1min/gemini-1.5-pro", "gemini-1.5-pro", "Gemini 1.5 Pro"))
     register(OneMinModel("1min/gemini-2.0-flash", "gemini-2.0-flash", "Gemini 2.0 Flash"))
-    register(
-        OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite")
-    )
+    register(OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite"))
     register(OneMinModel("1min/gemini-2.5-flash", "gemini-2.5-flash", "Gemini 2.5 Flash"))
     register(OneMinModel("1min/gemini-2.5-pro", "gemini-2.5-pro", "Gemini 2.5 Pro"))
 
@@ -271,8 +268,9 @@ def register_models(register):
     register(OneMinModel("1min/gpt-oss-120b", "openai/gpt-oss-120b", "GPT OSS 120b"))
 
     # Perplexity Models
+    register(OneMinModel("1min/sonar-reasoning-pro", "sonar-reasoning-pro", "Sonar Reasoning Pro"))
     register(OneMinModel("1min/sonar-reasoning", "sonar-reasoning", "Sonar Reasoning"))
-    register(OneMinModel("1min/sonar", "sonar", "Sonar"))
+    register(OneMinModel("1min/sonar", "sonar-pro", "Sonar"))
 
 
 class OneMinModel(llm.Model):
@@ -318,6 +316,11 @@ class OneMinModel(llm.Model):
         # Mixed model context
         is_mixed: Optional[bool] = Field(
             description="Mix context between different models in conversation", default=False
+        )
+
+        # Debug mode
+        debug: Optional[bool] = Field(
+            description="Show debug information including API request details", default=False
         )
 
         @field_validator("conversation_type")
@@ -425,6 +428,28 @@ class OneMinModel(llm.Model):
         # Apply CLI overrides
         merged_options.update(cli_options)
 
+        # Debug logging (enabled via -o debug true OR LLM_1MIN_DEBUG env var)
+        debug_mode = prompt.options.debug or os.environ.get("LLM_1MIN_DEBUG", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        if debug_mode:
+            import sys
+
+            print(f"\n{'=' * 70}", file=sys.stderr)
+            print("[DEBUG] 1min.ai API Request Details", file=sys.stderr)
+            print(f"{'=' * 70}", file=sys.stderr)
+            print(f"Model: {self.api_model_id}", file=sys.stderr)
+            print(f"\nOptions loaded from config:", file=sys.stderr)
+            print(f"  Global options: {global_options}", file=sys.stderr)
+            print(f"  Model-specific options: {model_options}", file=sys.stderr)
+            print(f"\nOptions from CLI:", file=sys.stderr)
+            print(f"  CLI options: {cli_options}", file=sys.stderr)
+            print(f"\nFinal merged options:", file=sys.stderr)
+            print(f"  {merged_options}", file=sys.stderr)
+            print(f"{'=' * 70}", file=sys.stderr)
+
         # Get or create 1min.ai conversation
         conversation_uuid = self.get_or_create_conversation(key, conversation, prompt)
 
@@ -454,6 +479,18 @@ class OneMinModel(llm.Model):
             "conversationId": conversation_uuid,
             "promptObject": prompt_object,
         }
+
+        # Debug logging for payload
+        if debug_mode:
+            import sys
+
+            print(f"\n{'=' * 70}", file=sys.stderr)
+            print("[DEBUG] API Request Payload", file=sys.stderr)
+            print(f"{'=' * 70}", file=sys.stderr)
+            print(f"Endpoint: https://api.1min.ai/api/features", file=sys.stderr)
+            print(f"\nPayload:", file=sys.stderr)
+            print(json.dumps(payload, indent=2), file=sys.stderr)
+            print(f"{'=' * 70}\n", file=sys.stderr)
 
         # Make the API request
         try:
@@ -510,12 +547,32 @@ def register_commands(cli):
 
     @cli.group(name="1min")
     def onemin_group():
-        """Manage 1min.ai conversations"""
+        """Manage 1min.ai conversations and options.
+
+        \b
+        Examples:
+          llm 1min models           # List models
+          llm 1min options list     # View settings
+          llm 1min conversations    # Active chats
+
+        \b
+        Debug (see API requests):
+          llm -m 1min/gpt-4o -o debug true "test"
+          LLM_1MIN_DEBUG=1 llm -m 1min/gpt-4o "test"
+          llm models --options
+        """
         pass
 
     @onemin_group.command(name="models")
     def list_models():
-        """List available 1min.ai models"""
+        """List all available 1min.ai models with descriptions.
+
+        Shows 66+ models from OpenAI, Anthropic, Google, xAI, Mistral, Meta,
+        DeepSeek, Cohere, and Perplexity.
+
+        Example:
+          llm 1min models | grep -i claude
+        """
         models = [
             # OpenAI Models
             ("1min/gpt-3.5-turbo", "GPT-3.5 Turbo", "Fast and economical OpenAI model"),
@@ -536,7 +593,7 @@ def register_commands(cli):
             ("1min/claude-3-haiku", "Claude 3 Haiku", "Fast and compact Anthropic model"),
             ("1min/claude-3-5-haiku", "Claude 3.5 Haiku", "Enhanced fast Anthropic model"),
             ("1min/claude-3-7-sonnet", "Claude 3.7 Sonnet", "Advanced Anthropic model"),
-            ("1min/claude-4-sonnet", "Claude 4 Sonnet", "Latest Anthropic Sonnet model"),
+            ("1min/claude-4-sonnet", "Claude 4 Sonnet", "Anthropic Sonnet model"),
             ("1min/claude-4-opus", "Claude 4 Opus", "Most powerful Anthropic model"),
             # Google Models
             ("1min/gemini-1.5-pro", "Gemini 1.5 Pro", "Google's advanced model"),
@@ -575,8 +632,9 @@ def register_commands(cli):
             ("1min/gpt-oss-20b", "GPT OSS 20b", "Open-source GPT 20B model"),
             ("1min/gpt-oss-120b", "GPT OSS 120b", "Open-source GPT 120B model"),
             # Perplexity Models
-            ("1min/sonar", "Sonar", "Perplexity web-aware model"),
+            ("1min/sonar-pro", "Sonar", "Perplexity web-aware model"),
             ("1min/sonar-reasoning", "Sonar Reasoning", "Perplexity with reasoning capabilities"),
+            ("1min/sonar-reasoning-pro", "Sonar Reasoning Pro", "Perplexity with reasoning capabilities"),
         ]
 
         click.echo("Available 1min.ai models:\n")
@@ -593,7 +651,14 @@ def register_commands(cli):
 
     @onemin_group.command(name="conversations")
     def list_conversations():
-        """List active 1min.ai conversations"""
+        """List active 1min.ai conversations.
+
+        Shows all tracked conversation UUIDs and their associated models.
+        Each conversation maintains context across multiple messages.
+
+        Example:
+          llm 1min conversations
+        """
         conversations = get_active_conversations()
 
         if not conversations:
@@ -605,10 +670,17 @@ def register_commands(cli):
             click.echo(f"  {key}: {uuid}")
 
     @onemin_group.command(name="clear")
-    @click.option("--model", "-m", help="Model ID to clear conversation for")
+    @click.option("--model", "-m", help="Model ID to clear conversation for (e.g., 1min/gpt-4o)")
     @click.option("--all", "clear_all", is_flag=True, help="Clear all conversations")
     def clear_conversations_cmd(model, clear_all):
-        """Clear 1min.ai conversation(s)"""
+        """Clear conversation history.
+
+        Use this to start fresh conversations or manage memory.
+
+        Examples:
+          llm 1min clear --model 1min/gpt-4o    # Clear specific model
+          llm 1min clear --all                  # Clear all conversations
+        """
         # Get API key from environment or LLM's key storage
         api_key = os.environ.get("ONEMIN_API_KEY")
 
@@ -639,22 +711,45 @@ def register_commands(cli):
 
     @onemin_group.group(name="options")
     def options_group():
-        """Manage persistent options for 1min.ai models"""
+        """Manage persistent configuration options.
+
+        Configure default behavior for web search, conversation types, and more.
+        Settings can be global or per-model.
+
+        Available options:
+          - web_search (true/false): Enable web search
+          - num_of_site (1-10): Sites to search
+          - max_word (number): Max words from search
+          - conversation_type (CHAT_WITH_AI/CODE_GENERATOR)
+          - is_mixed (true/false): Mix model contexts
+          - debug (true/false): Show API request details
+
+        Examples:
+          llm 1min options list              # View all settings
+          llm 1min options set web_search true
+          llm 1min options set --model sonar num_of_site 10
+        """
         pass
 
     @options_group.command(name="set")
     @click.argument("key")
     @click.argument("value")
     @click.option(
-        "--model", "-m", help="Set option for specific model (e.g., gpt-4o, claude-4-sonnet)"
+        "--model",
+        "-m",
+        help="Set option for specific model (use API name: gpt-4o, not 1min/gpt-4o)",
     )
     def set_option(key, value, model):
-        """Set an option (global or per-model)
+        """Set a configuration option.
+
+        Set options globally or for specific models. Use API model names
+        (e.g., 'gpt-4o', 'sonar') not LLM IDs (not '1min/gpt-4o').
 
         Examples:
-          llm 1min options set web_search true
+          llm 1min options set web_search true           # Global
           llm 1min options set --model gpt-4o web_search true
           llm 1min options set num_of_site 5
+          llm 1min options set --model sonar num_of_site 10
         """
         # Convert string value to appropriate type
         if value.lower() == "true":
@@ -675,13 +770,13 @@ def register_commands(cli):
 
     @options_group.command(name="get")
     @click.argument("key")
-    @click.option("--model", "-m", help="Get option for specific model")
+    @click.option("--model", "-m", help="Get option for specific model (API name)")
     def get_option(key, model):
-        """Get an option value
+        """Get a specific option value.
 
         Examples:
-          llm 1min options get web_search
-          llm 1min options get --model gpt-4o web_search
+          llm 1min options get web_search                # Global value
+          llm 1min options get --model gpt-4o web_search # Model-specific
         """
         try:
             if model:
@@ -700,13 +795,15 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="list")
-    @click.option("--model", "-m", help="List options for specific model")
+    @click.option("--model", "-m", help="Show options for specific model only")
     def list_options(model):
-        """List all options
+        """Display all configuration options.
+
+        Shows global defaults and per-model overrides.
 
         Examples:
-          llm 1min options list
-          llm 1min options list --model gpt-4o
+          llm 1min options list                 # All settings
+          llm 1min options list --model gpt-4o  # Model-specific only
         """
         try:
             if model:
@@ -742,13 +839,15 @@ def register_commands(cli):
 
     @options_group.command(name="unset")
     @click.argument("key")
-    @click.option("--model", "-m", help="Unset option for specific model")
+    @click.option("--model", "-m", help="Remove option from specific model")
     def unset_option(key, model):
-        """Remove an option
+        """Remove a configuration option.
+
+        Reverts to default behavior for that option.
 
         Examples:
-          llm 1min options unset web_search
-          llm 1min options unset --model gpt-4o web_search
+          llm 1min options unset web_search                 # Global
+          llm 1min options unset --model gpt-4o web_search  # Model-specific
         """
         try:
             removed = _options_config.unset_option(key, model)
@@ -768,9 +867,13 @@ def register_commands(cli):
     @options_group.command(name="reset")
     @click.confirmation_option(prompt="Are you sure you want to reset all options?")
     def reset_options():
-        """Reset all options to defaults
+        """Reset all options to defaults.
 
-        This will remove all global and per-model options.
+        ⚠️  WARNING: Removes ALL global and per-model configurations.
+        You will be prompted for confirmation.
+
+        Example:
+          llm 1min options reset
         """
         try:
             _options_config.reset()
@@ -779,13 +882,16 @@ def register_commands(cli):
             click.echo(f"Error: {e}", err=True)
 
     @options_group.command(name="export")
-    @click.option("--output", "-o", help="Output file (default: stdout)")
+    @click.option("--output", "-o", help="Output file path (prints to stdout if omitted)")
     def export_options(output):
-        """Export options configuration to JSON
+        """Export configuration to JSON file.
+
+        Useful for backup, sharing configs, or version control.
 
         Examples:
-          llm 1min options export
-          llm 1min options export --output my-config.json
+          llm 1min options export                        # Print to screen
+          llm 1min options export -o backup.json         # Save to file
+          llm 1min options export > my-settings.json     # Redirect output
         """
         try:
             config = _options_config.load()
@@ -803,7 +909,10 @@ def register_commands(cli):
     @options_group.command(name="import")
     @click.argument("file", type=click.Path(exists=True))
     def import_options(file):
-        """Import options configuration from JSON file
+        """Import configuration from JSON file.
+
+        ⚠️  WARNING: This will replace your current configuration.
+        Use 'export' first to backup existing settings.
 
         Example:
           llm 1min options import my-config.json
