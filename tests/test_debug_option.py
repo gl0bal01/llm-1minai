@@ -2,7 +2,6 @@
 Test the debug option functionality.
 """
 
-import sys
 from io import StringIO
 from unittest.mock import Mock, patch
 

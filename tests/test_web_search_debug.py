@@ -49,7 +49,7 @@ class TestWebSearchDebug:
                 print(f"\n{'=' * 60}")
                 print(f"API CALL #{i+1}")
                 print(f"URL: {url}")
-                print(f"PAYLOAD:")
+                print("PAYLOAD:")
                 print(json.dumps(payload, indent=2))
                 print("=" * 60)
 

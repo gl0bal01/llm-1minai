@@ -424,7 +424,7 @@ class OneMinModel(llm.Model):
         if debug_mode:
             import sys
 
-            print(f"\n[DEBUG] Conversation info:", file=sys.stderr)
+            print("\n[DEBUG] Conversation info:", file=sys.stderr)
             print(f"  conversation object: {conversation}", file=sys.stderr)
             if conversation:
                 print(f"  conversation.id: {getattr(conversation, 'id', 'N/A')}", file=sys.stderr)
@@ -584,12 +584,12 @@ class OneMinModel(llm.Model):
             print("[DEBUG] 1min.ai API Request Details", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
             print(f"Model: {self.api_model_id}", file=sys.stderr)
-            print(f"\nOptions loaded from config:", file=sys.stderr)
+            print("\nOptions loaded from config:", file=sys.stderr)
             print(f"  Global options: {global_options}", file=sys.stderr)
             print(f"  Model-specific options: {model_options}", file=sys.stderr)
-            print(f"\nOptions from CLI:", file=sys.stderr)
+            print("\nOptions from CLI:", file=sys.stderr)
             print(f"  CLI options: {cli_options}", file=sys.stderr)
-            print(f"\nFinal merged options:", file=sys.stderr)
+            print("\nFinal merged options:", file=sys.stderr)
             print(f"  {merged_options}", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
 
@@ -630,8 +630,8 @@ class OneMinModel(llm.Model):
             print(f"\n{'=' * 70}", file=sys.stderr)
             print("[DEBUG] API Request Payload", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
-            print(f"Endpoint: https://api.1min.ai/api/features", file=sys.stderr)
-            print(f"\nPayload:", file=sys.stderr)
+            print("Endpoint: https://api.1min.ai/api/features", file=sys.stderr)
+            print("\nPayload:", file=sys.stderr)
             print(json.dumps(payload, indent=2), file=sys.stderr)
             print(f"{'=' * 70}\n", file=sys.stderr)
 
