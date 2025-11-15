@@ -10,6 +10,43 @@ from pydantic import Field, field_validator
 
 # Store mapping of LLM conversation IDs to 1min.ai conversation UUIDs
 _conversation_mapping = {}
+_conversation_file = None
+
+
+def _get_conversation_file():
+    """Get the path to the persistent conversation mapping file."""
+    global _conversation_file
+    if _conversation_file is None:
+        config_dir = Path.home() / ".config" / "llm-1min"
+        config_dir.mkdir(parents=True, exist_ok=True)
+        _conversation_file = config_dir / "conversations.json"
+    return _conversation_file
+
+
+def _load_conversations():
+    """Load conversation mappings from disk."""
+    global _conversation_mapping
+    conv_file = _get_conversation_file()
+    if conv_file.exists():
+        try:
+            with open(conv_file) as f:
+                _conversation_mapping = json.load(f)
+        except Exception:
+            _conversation_mapping = {}
+
+
+def _save_conversations():
+    """Save conversation mappings to disk."""
+    conv_file = _get_conversation_file()
+    try:
+        with open(conv_file, "w") as f:
+            json.dump(_conversation_mapping, f, indent=2)
+    except Exception:
+        pass
+
+
+# Load existing conversations on module import
+_load_conversations()
 
 
 # Configuration management
@@ -127,6 +164,7 @@ def clear_conversation(model_id: str, api_key: str, conversation_uuid: str = Non
             if model_id in key:
                 conversation_uuid = uuid
                 del _conversation_mapping[key]
+                _save_conversations()  # Persist the deletion
                 break
 
     if conversation_uuid is None:
@@ -174,6 +212,9 @@ def clear_all_conversations(api_key: str) -> int:
         except Exception:
             continue
 
+    if count > 0:
+        _save_conversations()  # Persist the deletions
+
     return count
 
 
@@ -184,6 +225,7 @@ def get_active_conversations() -> dict:
     Returns:
         Dictionary of conversation mappings
     """
+    _load_conversations()  # Reload from disk to get latest
     return _conversation_mapping.copy()
 
 
@@ -366,14 +408,63 @@ class OneMinModel(llm.Model):
         Returns:
             1min.ai conversation UUID
         """
-        # Generate a unique key for this conversation
-        conv_key = f"{self.model_id}"
-        if conversation and hasattr(conversation, "id"):
-            conv_key = f"{conversation.id}_{self.model_id}"
+        # Reload conversation mappings from disk
+        _load_conversations()
 
-        # Check if we already have a 1min.ai conversation for this
-        if conv_key in _conversation_mapping:
-            return _conversation_mapping[conv_key]
+        # Debug logging
+        debug_mode = (
+            prompt.options.debug
+            or os.environ.get("LLM_1MIN_DEBUG", "").lower() in ("1", "true", "yes")
+        )
+        if debug_mode:
+            import sys
+            print(f"\n[DEBUG] Conversation info:", file=sys.stderr)
+            print(f"  conversation object: {conversation}", file=sys.stderr)
+            if conversation:
+                print(f"  conversation.id: {getattr(conversation, 'id', 'N/A')}", file=sys.stderr)
+                print(f"  conversation.name: {getattr(conversation, 'name', 'N/A')}", file=sys.stderr)
+
+        # Generate keys for this conversation
+        # Try conversation-specific key first, fall back to model-only key
+        model_only_key = f"{self.model_id}"
+        conv_specific_key = None
+        if conversation and hasattr(conversation, "id"):
+            conv_specific_key = f"{conversation.id}_{self.model_id}"
+
+        if debug_mode:
+            import sys
+            print(f"  model_only_key: {model_only_key}", file=sys.stderr)
+            print(f"  conv_specific_key: {conv_specific_key}", file=sys.stderr)
+            print(f"  existing mappings: {list(_conversation_mapping.keys())}", file=sys.stderr)
+
+        # Check if we have a conversation for this
+        # Try conversation-specific key first, then model-only key
+        conversation_uuid = None
+        if conv_specific_key and conv_specific_key in _conversation_mapping:
+            conversation_uuid = _conversation_mapping[conv_specific_key]
+            if debug_mode:
+                import sys
+                print(f"  ✓ Found via conv_specific_key: {conversation_uuid}", file=sys.stderr)
+        elif model_only_key in _conversation_mapping:
+            conversation_uuid = _conversation_mapping[model_only_key]
+            # Migrate to conversation-specific key if we have a conversation ID
+            if conv_specific_key:
+                _conversation_mapping[conv_specific_key] = conversation_uuid
+                del _conversation_mapping[model_only_key]
+                _save_conversations()
+                if debug_mode:
+                    import sys
+                    print(f"  ✓ Migrated from model_only_key to conv_specific_key: {conversation_uuid}", file=sys.stderr)
+            else:
+                if debug_mode:
+                    import sys
+                    print(f"  ✓ Found via model_only_key: {conversation_uuid}", file=sys.stderr)
+
+        if conversation_uuid:
+            return conversation_uuid
+
+        # No existing conversation found, create a new one
+        conv_key = conv_specific_key if conv_specific_key else model_only_key
 
         # Create a new 1min.ai conversation
         conversation_type = prompt.options.conversation_type or "CHAT_WITH_AI"
@@ -394,6 +485,12 @@ class OneMinModel(llm.Model):
 
             conversation_uuid = response.json()["conversation"]["uuid"]
             _conversation_mapping[conv_key] = conversation_uuid
+            _save_conversations()  # Persist to disk
+
+            if debug_mode:
+                import sys
+                print(f"  ✓ Created new conversation: {conversation_uuid}", file=sys.stderr)
+                print(f"  ✓ Stored with key: {conv_key}", file=sys.stderr)
 
             return conversation_uuid
 

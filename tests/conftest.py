@@ -204,6 +204,7 @@ def mock_config_path(tmp_path, monkeypatch):
     config_dir = tmp_path / ".config" / "llm-1min"
     config_dir.mkdir(parents=True, exist_ok=True)
     config_path = config_dir / "config.json"
+    conversations_path = config_dir / "conversations.json"
 
     # Patch OptionsConfig to use temp path
 
@@ -212,11 +213,17 @@ def mock_config_path(tmp_path, monkeypatch):
 
     monkeypatch.setattr(llm_1min.OptionsConfig, "__init__", patched_init)
 
-    # Reset global config instance
+    # Patch conversation file path
+    monkeypatch.setattr(llm_1min, "_conversation_file", conversations_path)
+
+    # Reset global config instance and conversation mapping
     llm_1min._options_config = llm_1min.OptionsConfig()
+    llm_1min._conversation_mapping = {}
 
     yield config_path
 
     # Cleanup
     if config_path.exists():
         config_path.unlink()
+    if conversations_path.exists():
+        conversations_path.unlink()
