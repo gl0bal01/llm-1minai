@@ -255,14 +255,18 @@ def register_models(register):
     register(OneMinModel("1min/claude-3-haiku", "claude-3-haiku-20240307", "Claude 3 Haiku"))
     register(OneMinModel("1min/claude-3-5-haiku", "claude-3-5-haiku-20241022", "Claude 3.5 Haiku"))
     register(OneMinModel("1min/claude-4-5-haiku", "claude-4-5-haiku-20251001", "Claude 4.5 Haiku"))
-    register(OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet"))
+    register(
+        OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet")
+    )
     register(OneMinModel("1min/claude-4-sonnet", "claude-sonnet-4-20250514", "Claude 4 Sonnet"))
     register(OneMinModel("1min/claude-4-opus", "claude-opus-4-20250514", "Claude 4 Opus"))
 
     # Google Models
     register(OneMinModel("1min/gemini-1.5-pro", "gemini-1.5-pro", "Gemini 1.5 Pro"))
     register(OneMinModel("1min/gemini-2.0-flash", "gemini-2.0-flash", "Gemini 2.0 Flash"))
-    register(OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite"))
+    register(
+        OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite")
+    )
     register(OneMinModel("1min/gemini-2.5-flash", "gemini-2.5-flash", "Gemini 2.5 Flash"))
     register(OneMinModel("1min/gemini-2.5-pro", "gemini-2.5-pro", "Gemini 2.5 Pro"))
 
@@ -412,17 +416,21 @@ class OneMinModel(llm.Model):
         _load_conversations()
 
         # Debug logging
-        debug_mode = (
-            prompt.options.debug
-            or os.environ.get("LLM_1MIN_DEBUG", "").lower() in ("1", "true", "yes")
+        debug_mode = prompt.options.debug or os.environ.get("LLM_1MIN_DEBUG", "").lower() in (
+            "1",
+            "true",
+            "yes",
         )
         if debug_mode:
             import sys
+
             print(f"\n[DEBUG] Conversation info:", file=sys.stderr)
             print(f"  conversation object: {conversation}", file=sys.stderr)
             if conversation:
                 print(f"  conversation.id: {getattr(conversation, 'id', 'N/A')}", file=sys.stderr)
-                print(f"  conversation.name: {getattr(conversation, 'name', 'N/A')}", file=sys.stderr)
+                print(
+                    f"  conversation.name: {getattr(conversation, 'name', 'N/A')}", file=sys.stderr
+                )
 
         # Generate keys for this conversation
         # If is_mixed is enabled, use conversation ID only (shared across models)
@@ -442,6 +450,7 @@ class OneMinModel(llm.Model):
 
         if debug_mode:
             import sys
+
             print(f"  model_only_key: {model_only_key}", file=sys.stderr)
             print(f"  conv_specific_key: {conv_specific_key}", file=sys.stderr)
             print(f"  existing mappings: {list(_conversation_mapping.keys())}", file=sys.stderr)
@@ -453,6 +462,7 @@ class OneMinModel(llm.Model):
             conversation_uuid = _conversation_mapping[conv_specific_key]
             if debug_mode:
                 import sys
+
                 print(f"  ✓ Found via conv_specific_key: {conversation_uuid}", file=sys.stderr)
         elif model_only_key in _conversation_mapping:
             conversation_uuid = _conversation_mapping[model_only_key]
@@ -463,10 +473,15 @@ class OneMinModel(llm.Model):
                 _save_conversations()
                 if debug_mode:
                     import sys
-                    print(f"  ✓ Migrated from model_only_key to conv_specific_key: {conversation_uuid}", file=sys.stderr)
+
+                    print(
+                        f"  ✓ Migrated from model_only_key to conv_specific_key: {conversation_uuid}",
+                        file=sys.stderr,
+                    )
             else:
                 if debug_mode:
                     import sys
+
                     print(f"  ✓ Found via model_only_key: {conversation_uuid}", file=sys.stderr)
         elif is_mixed and conversation and hasattr(conversation, "id"):
             # For is_mixed, check if there's a conversation from another model
@@ -480,8 +495,14 @@ class OneMinModel(llm.Model):
                     _save_conversations()
                     if debug_mode:
                         import sys
-                        print(f"  ✓ Found conversation from other model, migrated to shared key: {conversation_uuid}", file=sys.stderr)
-                        print(f"    Old key: {key} -> New key: {conv_specific_key}", file=sys.stderr)
+
+                        print(
+                            f"  ✓ Found conversation from other model, migrated to shared key: {conversation_uuid}",
+                            file=sys.stderr,
+                        )
+                        print(
+                            f"    Old key: {key} -> New key: {conv_specific_key}", file=sys.stderr
+                        )
                     break
 
         if conversation_uuid:
@@ -513,6 +534,7 @@ class OneMinModel(llm.Model):
 
             if debug_mode:
                 import sys
+
                 print(f"  ✓ Created new conversation: {conversation_uuid}", file=sys.stderr)
                 print(f"  ✓ Stored with key: {conv_key}", file=sys.stderr)
 
@@ -755,7 +777,11 @@ def register_commands(cli):
             # Perplexity Models
             ("1min/sonar-pro", "Sonar", "Perplexity web-aware model"),
             ("1min/sonar-reasoning", "Sonar Reasoning", "Perplexity with reasoning capabilities"),
-            ("1min/sonar-reasoning-pro", "Sonar Reasoning Pro", "Perplexity with reasoning capabilities"),
+            (
+                "1min/sonar-reasoning-pro",
+                "Sonar Reasoning Pro",
+                "Perplexity with reasoning capabilities",
+            ),
         ]
 
         click.echo("Available 1min.ai models:\n")
