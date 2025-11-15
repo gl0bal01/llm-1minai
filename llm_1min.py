@@ -425,11 +425,20 @@ class OneMinModel(llm.Model):
                 print(f"  conversation.name: {getattr(conversation, 'name', 'N/A')}", file=sys.stderr)
 
         # Generate keys for this conversation
-        # Try conversation-specific key first, fall back to model-only key
+        # If is_mixed is enabled, use conversation ID only (shared across models)
+        # Otherwise, use conversation ID + model ID (separate per model)
+        # Check if is_mixed option is enabled (from CLI or config)
+        is_mixed = prompt.options.is_mixed
+
         model_only_key = f"{self.model_id}"
         conv_specific_key = None
         if conversation and hasattr(conversation, "id"):
-            conv_specific_key = f"{conversation.id}_{self.model_id}"
+            if is_mixed:
+                # Use conversation ID only - shared across all models
+                conv_specific_key = f"{conversation.id}"
+            else:
+                # Use conversation ID + model ID - separate per model
+                conv_specific_key = f"{conversation.id}_{self.model_id}"
 
         if debug_mode:
             import sys
@@ -459,6 +468,21 @@ class OneMinModel(llm.Model):
                 if debug_mode:
                     import sys
                     print(f"  ✓ Found via model_only_key: {conversation_uuid}", file=sys.stderr)
+        elif is_mixed and conversation and hasattr(conversation, "id"):
+            # For is_mixed, check if there's a conversation from another model
+            # with this same LLM conversation ID that we can reuse
+            for key, uuid in list(_conversation_mapping.items()):
+                if key.startswith(f"{conversation.id}_"):
+                    conversation_uuid = uuid
+                    # Migrate to conversation-only key (shared across models)
+                    _conversation_mapping[conv_specific_key] = conversation_uuid
+                    del _conversation_mapping[key]
+                    _save_conversations()
+                    if debug_mode:
+                        import sys
+                        print(f"  ✓ Found conversation from other model, migrated to shared key: {conversation_uuid}", file=sys.stderr)
+                        print(f"    Old key: {key} -> New key: {conv_specific_key}", file=sys.stderr)
+                    break
 
         if conversation_uuid:
             return conversation_uuid

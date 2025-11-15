@@ -223,8 +223,12 @@ llm -m 1min/claude-4-sonnet \
   "Write a binary search algorithm"
 
 # Mix context between models
-llm -m 1min/gpt-4o -o is_mixed true "Start analysis"
-llm -m 1min/claude-4-opus -o is_mixed true "Continue from previous"
+# Start a conversation first
+llm -m 1min/gpt-4o -c "My name is Fabien"
+
+# Now switch to different model (must use -c and is_mixed)
+llm -m 1min/claude-4-opus -c -o is_mixed true "What is my name?"
+# ↑ Both models now share the same conversation context
 
 # Debug mode - see what's being sent to the API
 llm -m 1min/gpt-4o -o debug true "test prompt"
