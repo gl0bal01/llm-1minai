@@ -12,6 +12,21 @@ from pydantic import Field, field_validator
 _conversation_mapping = {}
 _conversation_file = None
 
+# Model-specific defaults - code-focused models use CODE_GENERATOR by default
+MODEL_DEFAULTS = {
+    # Code-focused models should use CODE_GENERATOR
+    "grok-code-fast-1": {"conversation_type": "CODE_GENERATOR"},
+    "claude-sonnet-4-20250514": {
+        "conversation_type": "CODE_GENERATOR"
+    },  # Claude 4 Sonnet - great for code
+    "claude-3-7-sonnet-20250219": {"conversation_type": "CODE_GENERATOR"},  # Claude 3.7 Sonnet
+    "deepseek-reasoner": {"conversation_type": "CODE_GENERATOR"},  # DeepSeek R1 - strong for code
+    # Web-aware models should have web_search enabled
+    "sonar-pro": {"web_search": True, "num_of_site": 5},
+    "sonar-reasoning": {"web_search": True, "num_of_site": 5},
+    "sonar-reasoning-pro": {"web_search": True, "num_of_site": 5},
+}
+
 
 def _get_conversation_file():
     """Get the path to the persistent conversation mapping file."""
@@ -552,8 +567,11 @@ class OneMinModel(llm.Model):
         global_options = _options_config.get_defaults()
         model_options = _options_config.get_model_options(self.api_model_id)
 
-        # Merge options: global < model-specific < CLI
-        merged_options = {**global_options, **model_options}
+        # Get built-in model defaults (for code models, web-aware models, etc.)
+        builtin_defaults = MODEL_DEFAULTS.get(self.api_model_id, {})
+
+        # Merge options: builtin < global < model-specific < CLI
+        merged_options = {**builtin_defaults, **global_options, **model_options}
 
         # CLI options override everything (only if explicitly set)
         cli_options = {}
@@ -584,10 +602,10 @@ class OneMinModel(llm.Model):
             print("[DEBUG] 1min.ai API Request Details", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
             print(f"Model: {self.api_model_id}", file=sys.stderr)
-            print("\nOptions loaded from config:", file=sys.stderr)
-            print(f"  Global options: {global_options}", file=sys.stderr)
-            print(f"  Model-specific options: {model_options}", file=sys.stderr)
-            print("\nOptions from CLI:", file=sys.stderr)
+            print("\nOptions (priority: CLI > user config > built-in defaults):", file=sys.stderr)
+            print(f"  Built-in model defaults: {builtin_defaults}", file=sys.stderr)
+            print(f"  User global options: {global_options}", file=sys.stderr)
+            print(f"  User model-specific options: {model_options}", file=sys.stderr)
             print(f"  CLI options: {cli_options}", file=sys.stderr)
             print("\nFinal merged options:", file=sys.stderr)
             print(f"  {merged_options}", file=sys.stderr)
@@ -983,6 +1001,32 @@ def register_commands(cli):
                             click.echo(f"    {key} = {value}")
         except Exception as e:
             click.echo(f"Error: {e}", err=True)
+
+    @options_group.command(name="defaults")
+    def show_defaults():
+        """Show built-in model defaults.
+
+        These are optimized settings for specific models:
+        - Code models use CODE_GENERATOR by default
+        - Web-aware models have web_search enabled
+
+        You can override these with your own settings.
+
+        Example:
+          llm 1min options defaults
+        """
+        click.echo("Built-in model defaults:\n")
+        if MODEL_DEFAULTS:
+            for model_id, defaults in MODEL_DEFAULTS.items():
+                click.echo(f"  {click.style(model_id, fg='cyan', bold=True)}:")
+                for key, value in defaults.items():
+                    click.echo(f"    {key} = {value}")
+                click.echo()
+        else:
+            click.echo("  No built-in defaults defined")
+
+        click.echo("Priority: CLI options > User config > Built-in defaults")
+        click.echo("\nOverride with: llm 1min options set --model <api-model-id> <key> <value>")
 
     @options_group.command(name="unset")
     @click.argument("key")

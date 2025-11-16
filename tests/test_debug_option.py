@@ -46,7 +46,8 @@ class TestDebugOption:
 
         assert "[DEBUG] 1min.ai API Request Details" in debug_output
         assert "Model: gpt-4o" in debug_output
-        assert "Global options:" in debug_output
+        assert "User global options:" in debug_output
+        assert "Built-in model defaults:" in debug_output
         assert "web_search" in debug_output
         assert "[DEBUG] API Request Payload" in debug_output
         assert "webSearch" in debug_output

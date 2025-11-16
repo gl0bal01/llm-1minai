@@ -164,9 +164,9 @@ llm models --options | grep -A 8 "1min/gpt-4o"
 **Note**: The `-d` flag is already used by LLM for database operations, so debug uses `-o debug true`.
 For more details, see [DEBUG_USAGE.md](DEBUG_USAGE.md)
 
-### Conversation Mode
+### Conversation Mode (Chat)
 
-Continue a conversation with context:
+Continue a conversation with context using the `-c` flag:
 
 ```bash
 # Start a conversation
@@ -175,25 +175,39 @@ llm -m 1min/gpt-4o "Hello, I need help with Python"
 # Continue the conversation (uses -c flag)
 llm -m 1min/gpt-4o -c "What are list comprehensions?"
 
-# Keep going
-llm -m 1min/gpt-4o -c "Show me an example"
+# Keep going - model is remembered automatically
+llm -c "Show me an example"
+
+# Resume a specific conversation by ID
+llm -c --cid <conversation-id> "Continue this topic"
+
+# View conversation history
+llm logs -n 5
 ```
+
+**Important:** The `-c` flag is handled by the LLM framework, not this plugin. Each continuation re-sends prior messages to maintain context.
+
+See the [LLM chat documentation](https://llm.datasette.io/en/stable/usage.html#continuing-a-conversation) for more details.
 
 ### Code Generation
 
-Use the CODE_GENERATOR conversation type for better code generation:
+Code-focused models automatically use `CODE_GENERATOR` mode by default:
 
 ```bash
-llm -m 1min/claude-4-sonnet \
+# These models auto-use CODE_GENERATOR (no -o needed)
+llm -m 1min/claude-4-sonnet "Create a REST API with FastAPI"
+llm -m 1min/grok-code-fast-1 "Create a simple REST API with Go"
+llm -m 1min/deepseek-r1 "Optimize this algorithm"
+
+# Explicitly set for other models
+llm -m 1min/gpt-4o \
   -o conversation_type CODE_GENERATOR \
-  "Create a REST API with FastAPI"
+  "Write a binary search function"
 ```
 
-```bash
-llm -m 1min/grok-code-fast-1 \
-  -o conversation_type CODE_GENERATOR \
-  "Create a simple REST API with Go"
-```
+**Built-in defaults** (see `llm 1min options defaults`):
+- **Code models**: `claude-4-sonnet`, `claude-3-7-sonnet`, `grok-code-fast-1`, `deepseek-r1` → `CODE_GENERATOR`
+- **Web-aware models**: `sonar`, `sonar-reasoning`, `sonar-reasoning-pro` → `web_search=true`
 
 ### Advanced Options
 
