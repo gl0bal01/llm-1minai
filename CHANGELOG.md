@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-16
+
+### Added
+- **Claude 4.5 Haiku Model**: Added support for `1min/claude-4-5-haiku` - Claude's latest fast model
+- **Debug Mode**: New `-o debug true` option to see API request details for troubleshooting
+  - Shows options hierarchy (built-in defaults → user config → CLI)
+  - Displays complete API payload being sent
+  - Also available via `LLM_1MIN_DEBUG=1` environment variable
+- **Debug Documentation**: Added `DEBUG_USAGE.md` with comprehensive debugging guide
+- **Help Text Summary**: Added `HELP_TEXT_SUMMARY.md` documenting all CLI commands and options
+
+### Changed
+- **Enhanced MODEL_SELECTION.md**: Completely restructured with 1min/ prefix usage, all 67 models documented
+- **Updated README.md**: Added debug mode section, improved examples with correct model IDs
+- **Model Count**: Expanded from 66 to 67 models (added Claude 4.5 Haiku)
+
+### Fixed
+- **is_mixed Workflow**: Corrected documentation for mixed model context usage
+- **Test Coverage**: Fixed test suite for debug option functionality
+- **Code Formatting**: Applied black and ruff for consistent code style
+
 ## [0.2.0] - 2025-11-10
 
 ### Added
@@ -110,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- **0.3.0** (2025-11-16): Debug mode, Claude 4.5 Haiku, enhanced documentation
 - **0.2.0** (2025-11-10): Major feature release - Web search, mixed context, 66 models, persistent options
 - **0.1.0** (2025-11-09): Initial release - 12 models, basic conversation management
 
