@@ -10,26 +10,22 @@ Usage:
     python test_api.py
 """
 
-import os
-import requests
 import json
+import os
+
+import requests
 
 
 def test_api_endpoint(api_key, endpoint_url, test_streaming=True):
     """Test the 1min.ai API endpoint"""
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     # Test payload - adjust based on actual API requirements
     payload = {
-        "messages": [
-            {"role": "user", "content": "Hello! Please respond with 'API is working'."}
-        ],
+        "messages": [{"role": "user", "content": "Hello! Please respond with 'API is working'."}],
         "temperature": 0.7,
-        "max_tokens": 50
+        "max_tokens": 50,
     }
 
     print(f"Testing endpoint: {endpoint_url}")
@@ -40,12 +36,7 @@ def test_api_endpoint(api_key, endpoint_url, test_streaming=True):
     print("Testing NON-STREAMING response:")
     print("=" * 60)
     try:
-        response = requests.post(
-            endpoint_url,
-            headers=headers,
-            json=payload,
-            timeout=30
-        )
+        response = requests.post(endpoint_url, headers=headers, json=payload, timeout=30)
 
         print(f"Status Code: {response.status_code}")
         print(f"Response Headers:\n{json.dumps(dict(response.headers), indent=2)}\n")
@@ -69,11 +60,7 @@ def test_api_endpoint(api_key, endpoint_url, test_streaming=True):
 
         try:
             with requests.post(
-                endpoint_url,
-                headers=headers,
-                json=payload,
-                stream=True,
-                timeout=30
+                endpoint_url, headers=headers, json=payload, stream=True, timeout=30
             ) as r:
                 print(f"Status Code: {r.status_code}\n")
 
@@ -81,7 +68,7 @@ def test_api_endpoint(api_key, endpoint_url, test_streaming=True):
                     print("Streaming chunks:")
                     for line in r.iter_lines():
                         if line:
-                            decoded = line.decode('utf-8')
+                            decoded = line.decode("utf-8")
                             print(f"  {decoded}")
 
                 else:
