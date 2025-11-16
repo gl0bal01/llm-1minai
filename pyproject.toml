@@ -1,6 +1,6 @@
 [project]
 name = "llm-1minai"
-version = "0.2.0"
+version = "0.3.0"
 description = "LLM plugin providing access to 66+ AI models through 1min.ai API with web search, mixed context, and persistent options"
 readme = "README.md"
 authors = [{name = "gl0bal01"}]
