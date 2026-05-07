@@ -1189,7 +1189,9 @@ def register_commands(cli):
             asset = response.json().get("asset") or {}
             key = asset.get("key")
             if not key:
-                click.echo(f"Error: Upload succeeded but no key in response: {response.text}", err=True)
+                click.echo(
+                    f"Error: Upload succeeded but no key in response: {response.text}", err=True
+                )
                 sys.exit(1)
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else "?"
