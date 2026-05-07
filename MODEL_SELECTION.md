@@ -1,404 +1,221 @@
 # How to Select the Right Model
 
-## Understanding Model IDs
+This document is regenerated from `register_models()` whenever the catalog changes. The canonical, runtime-correct list is `llm 1min models`.
 
-When you run `llm models list`, you'll see:
+**v0.4.0 — 75 models across 10 providers.**
 
-```
-1min.ai: gpt-4o-mini
-1min.ai: claude-sonnet-4-20250514
-1min.ai: deepseek-chat
-```
-
-**The text after "1min.ai:" is the model ID you use with `-m`**
-
-## Two Ways to View Models
-
-### Method 1: Quick List (Model IDs Only)
+## Quick Lookup
 
 ```bash
-llm models list | grep "1min.ai"
-```
-
-**Output:**
-```
-1min.ai: gpt-4o-mini              ← Copy this ID
-1min.ai: gpt-4o                   ← Copy this ID
-1min.ai: claude-3-7-sonnet-20250219
-...
-```
-
-### Method 2: Detailed View (IDs + Descriptions)
-
-```bash
+# Full catalog with [code] / [web] tags
 llm 1min models
+
+# LLM-tool IDs only
+llm models list | grep '1min.ai'
 ```
 
-**Output:**
+## Tags
+- 🚀 = `MODEL_DEFAULTS` sets `conversation_type=CODE_GENERATOR` (CODE_GENERATOR routes to /api/features)
+- 🌐 = `MODEL_DEFAULTS` sets `web_search=True`
+
+## OpenAI
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/gpt-3.5-turbo` | `gpt-3.5-turbo` | GPT-3.5 Turbo |
+| `1min/gpt-4-turbo` | `gpt-4-turbo` | GPT-4 Turbo |
+| `1min/gpt-4.1` | `gpt-4.1` | GPT-4.1 |
+| `1min/gpt-4.1-mini` | `gpt-4.1-mini` | GPT-4.1 Mini |
+| `1min/gpt-4.1-nano` | `gpt-4.1-nano` | GPT-4.1 Nano |
+| `1min/gpt-4o-mini` | `gpt-4o-mini` | GPT-4o Mini |
+| `1min/gpt-4o` | `gpt-4o` | GPT-4o |
+| `1min/gpt-5` | `gpt-5` | GPT-5 |
+| `1min/gpt-5-mini` | `gpt-5-mini` | GPT-5 Mini |
+| `1min/gpt-5-nano` | `gpt-5-nano` | GPT-5 Nano |
+| `1min/gpt-5-chat-latest` | `gpt-5-chat-latest` | GPT-5 Chat Latest |
+| `1min/gpt-5.1` | `gpt-5.1` | GPT-5.1 |
+| `1min/gpt-5.1-codex` | `gpt-5.1-codex` | GPT-5.1 Codex 🚀 |
+| `1min/gpt-5.1-codex-mini` | `gpt-5.1-codex-mini` | GPT-5.1 Codex Mini 🚀 |
+| `1min/gpt-5.2` | `gpt-5.2` | GPT-5.2 |
+| `1min/gpt-5.2-pro` | `gpt-5.2-pro` | GPT-5.2 Pro |
+| `1min/gpt-5.4` | `gpt-5.4` | GPT-5.4 |
+| `1min/gpt-5.4-mini` | `gpt-5.4-mini` | GPT-5.4 Mini |
+| `1min/gpt-5.4-nano` | `gpt-5.4-nano` | GPT-5.4 Nano |
+| `1min/gpt-5.4-pro` | `gpt-5.4-pro` | GPT-5.4 Pro |
+| `1min/o3` | `o3` | o3 |
+| `1min/o3-mini` | `o3-mini` | o3 Mini |
+| `1min/o3-pro` | `o3-pro` | o3 Pro |
+| `1min/o3-deep-research` | `o3-deep-research` | o3 Deep Research 🌐 |
+| `1min/o4-mini` | `o4-mini` | o4 Mini |
+| `1min/o4-mini-deep-research` | `o4-mini-deep-research` | o4 Mini Deep Research 🌐 |
+
+## Anthropic
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/claude-4-sonnet` | `claude-sonnet-4-20250514` | Claude 4 Sonnet |
+| `1min/claude-4-5-sonnet` | `claude-sonnet-4-5-20250929` | Claude 4.5 Sonnet |
+| `1min/claude-4-6-sonnet` | `claude-sonnet-4-6` | Claude 4.6 Sonnet 🚀 |
+| `1min/claude-4-opus` | `claude-opus-4-20250514` | Claude 4 Opus |
+| `1min/claude-4-1-opus` | `claude-opus-4-1-20250805` | Claude 4.1 Opus |
+| `1min/claude-4-5-opus` | `claude-opus-4-5-20251101` | Claude 4.5 Opus |
+| `1min/claude-4-6-opus` | `claude-opus-4-6` | Claude 4.6 Opus 🚀 |
+| `1min/claude-4-5-haiku` | `claude-haiku-4-5-20251001` | Claude 4.5 Haiku 🚀 |
+
+## Google
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/gemini-2.5-flash` | `gemini-2.5-flash` | Gemini 2.5 Flash |
+| `1min/gemini-2.5-pro` | `gemini-2.5-pro` | Gemini 2.5 Pro |
+| `1min/gemini-3-flash` | `gemini-3-flash-preview` | Gemini 3 Flash (Preview) |
+| `1min/gemini-3.1-flash-lite` | `gemini-3.1-flash-lite-preview` | Gemini 3.1 Flash Lite (Preview) |
+| `1min/gemini-3.1-pro` | `gemini-3.1-pro-preview` | Gemini 3.1 Pro (Preview) |
+
+## Alibaba (Qwen)
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/qwen-flash` | `qwen-flash` | Qwen Flash |
+| `1min/qwen-plus` | `qwen-plus` | Qwen Plus |
+| `1min/qwen-max` | `qwen-max` | Qwen Max |
+| `1min/qwen-vl-plus` | `qwen-vl-plus` | Qwen VL Plus |
+| `1min/qwen-vl-max` | `qwen-vl-max` | Qwen VL Max |
+| `1min/qwen3-max` | `qwen3-max` | Qwen3 Max |
+| `1min/qwen3-vl-flash` | `qwen3-vl-flash` | Qwen3 VL Flash |
+| `1min/qwen3-vl-plus` | `qwen3-vl-plus` | Qwen3 VL Plus |
+| `1min/qwen3-coder-plus` | `qwen3-coder-plus` | Qwen3 Coder Plus 🚀 |
+| `1min/qwen3-coder-flash` | `qwen3-coder-flash` | Qwen3 Coder Flash 🚀 |
+
+## DeepSeek
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/deepseek-chat` | `deepseek-chat` | DeepSeek V3.2 Chat |
+| `1min/deepseek-reasoner` | `deepseek-reasoner` | DeepSeek V3.2 Reasoner 🚀 |
+
+## xAI
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/grok-3` | `grok-3` | Grok 3 |
+| `1min/grok-3-mini` | `grok-3-mini` | Grok 3 Mini |
+| `1min/grok-4` | `grok-4-0709` | Grok 4 |
+| `1min/grok-4-fast-non-reasoning` | `grok-4-fast-non-reasoning` | Grok 4 Fast Non-Reasoning |
+| `1min/grok-4-fast-reasoning` | `grok-4-fast-reasoning` | Grok 4 Fast Reasoning |
+| `1min/grok-code-fast-1` | `grok-code-fast-1` | Grok Code Fast 1 🚀 |
+
+## Mistral
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/open-mistral-nemo` | `open-mistral-nemo` | Mistral Open Nemo |
+| `1min/mistral-small-latest` | `mistral-small-latest` | Mistral Small |
+| `1min/mistral-medium-latest` | `mistral-medium-latest` | Mistral Medium 3.1 |
+| `1min/mistral-large-latest` | `mistral-large-latest` | Mistral Large 2 |
+| `1min/magistral-small-latest` | `magistral-small-latest` | Magistral Small 1.2 |
+| `1min/magistral-medium-latest` | `magistral-medium-latest` | Magistral Medium 1.2 |
+| `1min/ministral-14b-latest` | `ministral-14b-latest` | Ministral 14B |
+
+## Cohere
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/command-r` | `command-r-08-2024` | Command R |
+
+## Meta / Open Source
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/llama-2-70b` | `meta/llama-2-70b-chat` | LLaMA 2 70b |
+| `1min/llama-3-70b` | `meta/meta-llama-3-70b-instruct` | LLaMA 3 70b |
+| `1min/llama-4-scout` | `meta/llama-4-scout-instruct` | LLaMA 4 Scout |
+| `1min/llama-4-maverick` | `meta/llama-4-maverick-instruct` | LLaMA 4 Maverick |
+| `1min/gpt-oss-20b` | `openai/gpt-oss-20b` | GPT OSS 20b |
+| `1min/gpt-oss-120b` | `openai/gpt-oss-120b` | GPT OSS 120b |
+
+## Perplexity
+
+| LLM ID | API model | Display name |
+|--------|-----------|--------------|
+| `1min/sonar` | `sonar` | Perplexity Sonar 🌐 |
+| `1min/sonar-pro` | `sonar-pro` | Perplexity Sonar Pro 🌐 |
+| `1min/sonar-reasoning-pro` | `sonar-reasoning-pro` | Perplexity Sonar Reasoning Pro 🌐 |
+| `1min/sonar-deep-research` | `sonar-deep-research` | Perplexity Sonar Deep Research 🌐 |
+
+## Selection Guide
+
+### Code generation (auto-CODE_GENERATOR)
+```bash
+llm -m 1min/claude-4-6-sonnet 'Write a FastAPI endpoint'
+llm -m 1min/qwen3-coder-plus 'Refactor this Go service'
+llm -m 1min/grok-code-fast-1 'Optimize this algorithm'
+llm -m 1min/deepseek-reasoner 'Debug this concurrency bug'
 ```
-Available 1min.ai models:
 
-  gpt-4o-mini                     ← Copy this ID
-    Name: GPT-4o Mini
-    Description: Fast and cost-effective OpenAI model
-
-  claude-sonnet-4-20250514        ← Copy this ID
-    Name: Claude 4 Sonnet
-    Description: Latest Anthropic model
+### Web-aware (auto-`web_search`)
+```bash
+llm -m 1min/sonar-pro 'Latest AI news with citations'
+llm -m 1min/sonar-deep-research 'Multi-source research dive'
+llm -m 1min/o3-deep-research 'Reasoning + web grounding'
 ```
 
-## How to Use Model IDs
+### Cross-conversation memory
+```bash
+llm -m 1min/gpt-4o -o with_memories true 'Remember I use Postgres'
+llm -c 'What database did I mention earlier?'
+```
 
-### Step 1: Find the Model ID
+### Image / file attachments (upload first via Asset API)
+```bash
+llm -m 1min/gpt-4o \
+    -o images 'images/2024_09_30_13_41_50_758_photo.png' \
+    'Describe this image'
+
+llm -m 1min/claude-4-6-sonnet \
+    -o files '20ad0277-74df-4629-8c50-56a2549acbd7' \
+    'Summarize this PDF'
+```
+
+### Mixed-model conversation history (renamed from is_mixed)
+```bash
+llm -m 1min/gpt-4o -c 'My name is Fabien'
+llm -m 1min/claude-4-6-opus -c -o history_mixed true 'What is my name?'
+```
+
+### Streaming
+```bash
+llm chat --stream -m 1min/gpt-4o 'Explain quantum computing'
+```
+
+## Migrating from v0.3.x
+
+If you previously used any of these IDs, switch to the listed replacement. Anything not listed below is unchanged.
+
+| Removed in v0.4.0 | Replacement |
+|-------------------|-------------|
+| `1min/o1-mini` | `1min/o4-mini` or `1min/o3-mini` |
+| `1min/claude-3-haiku` | `1min/claude-4-5-haiku` |
+| `1min/claude-3-5-haiku` | `1min/claude-4-5-haiku` |
+| `1min/claude-3-7-sonnet` | `1min/claude-4-5-sonnet` or `1min/claude-4-6-sonnet` |
+| `1min/gemini-1.5-pro` | `1min/gemini-2.5-pro` or `1min/gemini-3.1-pro` |
+| `1min/gemini-2.0-flash` | `1min/gemini-2.5-flash` or `1min/gemini-3-flash` |
+| `1min/gemini-2.0-flash-lite` | `1min/gemini-3.1-flash-lite` |
+| `1min/grok-2` | `1min/grok-3` or `1min/grok-4` |
+| `1min/pixtral-12b` | `1min/qwen-vl-plus` or `1min/gpt-4o` (vision) |
+| `1min/llama-3.1-405b` | `1min/llama-4-maverick` |
+| `1min/sonar-reasoning` | `1min/sonar-reasoning-pro` |
+| `1min/deepseek-r1` (renamed) | `1min/deepseek-reasoner` |
+
+Saved configs that referenced `is_mixed` need a one-time rename:
 
 ```bash
-llm models list | grep "1min.ai"
-```
-
-Look for the text after "1min.ai:". For example:
-- `1min.ai: 1min/gpt-4o-mini` → Model ID is **1min/gpt-4o-mini**
-- `1min.ai: 1min/claude-4-sonnet` → Model ID is **1min/claude-4-sonnet**
-
-### Step 2: Use with -m Flag
-
-```bash
-llm -m 1min/<model-name> "your prompt"
-```
-
-### Examples
-
-```bash
-# ✅ Correct - Using full model ID with 1min/ prefix
-llm -m 1min/gpt-4o-mini "Hello"
-llm -m 1min/claude-4-sonnet "Write code"
-llm -m 1min/deepseek-chat "Explain AI"
-llm -m 1min/grok-4 "Solve problem"
-llm -m 1min/gemini-2.5-pro "Analyze document"
-llm -m 1min/sonar "Latest AI news"
-
-# ❌ Wrong - Missing 1min/ prefix
-llm -m gpt-4o-mini "Hello"            # Won't work
-llm -m claude-4-sonnet "Write code"   # Won't work
-
-# ❌ Wrong - Using friendly name
-llm -m "GPT-4o Mini" "Hello"          # Won't work
-llm -m "Claude 4 Sonnet" "Write code" # Won't work
-```
-
-## Complete Model Reference
-
-### OpenAI Models
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/gpt-3.5-turbo` | `1min/gpt-3.5-turbo` | GPT-3.5 Turbo |
-| `1min.ai: 1min/gpt-4-turbo` | `1min/gpt-4-turbo` | GPT-4 Turbo |
-| `1min.ai: 1min/gpt-4.1` | `1min/gpt-4.1` | GPT-4.1 |
-| `1min.ai: 1min/gpt-4.1-mini` | `1min/gpt-4.1-mini` | GPT-4.1 Mini |
-| `1min.ai: 1min/gpt-4.1-nano` | `1min/gpt-4.1-nano` | GPT-4.1 Nano |
-| `1min.ai: 1min/gpt-4o-mini` | `1min/gpt-4o-mini` | GPT-4o Mini |
-| `1min.ai: 1min/gpt-4o` | `1min/gpt-4o` | GPT-4o |
-| `1min.ai: 1min/gpt-5` | `1min/gpt-5` | GPT-5 |
-| `1min.ai: 1min/gpt-5-mini` | `1min/gpt-5-mini` | GPT-5 Mini |
-| `1min.ai: 1min/gpt-5-nano` | `1min/gpt-5-nano` | GPT-5 Nano |
-| `1min.ai: 1min/gpt-5-chat-latest` | `1min/gpt-5-chat-latest` | GPT-5 Chat Latest |
-| `1min.ai: 1min/o1-mini` | `1min/o1-mini` | O1 Mini |
-| `1min.ai: 1min/o3-mini` | `1min/o3-mini` | O3 Mini |
-| `1min.ai: 1min/o4-mini` | `1min/o4-mini` | O4 Mini |
-
-### Anthropic Models (🚀 = uses CODE_GENERATOR by default)
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/claude-3-haiku` | `1min/claude-3-haiku` | Claude 3 Haiku |
-| `1min.ai: 1min/claude-3-5-haiku` | `1min/claude-3-5-haiku` | Claude 3.5 Haiku |
-| `1min.ai: 1min/claude-3-7-sonnet` | `1min/claude-3-7-sonnet` | Claude 3.7 Sonnet 🚀 |
-| `1min.ai: 1min/claude-4-sonnet` | `1min/claude-4-sonnet` | Claude 4 Sonnet 🚀 |
-| `1min.ai: 1min/claude-4-opus` | `1min/claude-4-opus` | Claude 4 Opus |
-
-### Google Models
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/gemini-1.5-pro` | `1min/gemini-1.5-pro` | Gemini 1.5 Pro |
-| `1min.ai: 1min/gemini-2.0-flash` | `1min/gemini-2.0-flash` | Gemini 2.0 Flash |
-| `1min.ai: 1min/gemini-2.0-flash-lite` | `1min/gemini-2.0-flash-lite` | Gemini 2.0 Flash Lite |
-| `1min.ai: 1min/gemini-2.5-flash` | `1min/gemini-2.5-flash` | Gemini 2.5 Flash |
-| `1min.ai: 1min/gemini-2.5-pro` | `1min/gemini-2.5-pro` | Gemini 2.5 Pro |
-
-### DeepSeek Models (🚀 = uses CODE_GENERATOR by default)
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/deepseek-chat` | `1min/deepseek-chat` | DeepSeek Chat |
-| `1min.ai: 1min/deepseek-r1` | `1min/deepseek-r1` | DeepSeek R1 🚀 |
-
-### xAI Models (🚀 = uses CODE_GENERATOR by default)
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/grok-2` | `1min/grok-2` | Grok 2 |
-| `1min.ai: 1min/grok-3` | `1min/grok-3` | Grok 3 |
-| `1min.ai: 1min/grok-3-mini` | `1min/grok-3-mini` | Grok 3 Mini |
-| `1min.ai: 1min/grok-4` | `1min/grok-4` | Grok 4 |
-| `1min.ai: 1min/grok-4-fast-non-reasoning` | `1min/grok-4-fast-non-reasoning` | Grok 4 Fast Non-Reasoning |
-| `1min.ai: 1min/grok-4-fast-reasoning` | `1min/grok-4-fast-reasoning` | Grok 4 Fast Reasoning |
-| `1min.ai: 1min/grok-code-fast-1` | `1min/grok-code-fast-1` | Grok Code Fast 1 🚀 |
-
-### Mistral Models
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/open-mistral-nemo` | `1min/open-mistral-nemo` | Mistral Open Nemo |
-| `1min.ai: 1min/mistral-small-latest` | `1min/mistral-small-latest` | Mistral Small |
-| `1min.ai: 1min/mistral-large-latest` | `1min/mistral-large-latest` | Mistral Large 2 |
-| `1min.ai: 1min/pixtral-12b` | `1min/pixtral-12b` | Mistral Pixtral 12B |
-
-### Cohere Models
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/command-r` | `1min/command-r` | Command R |
-
-### Meta/LLaMA Models
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/llama-2-70b` | `1min/llama-2-70b` | LLaMA 2 70b |
-| `1min.ai: 1min/llama-3-70b` | `1min/llama-3-70b` | LLaMA 3 70b |
-| `1min.ai: 1min/llama-3.1-405b` | `1min/llama-3.1-405b` | LLaMA 3.1 405b |
-| `1min.ai: 1min/llama-4-scout` | `1min/llama-4-scout` | LLaMA 4 Scout |
-| `1min.ai: 1min/llama-4-maverick` | `1min/llama-4-maverick` | LLaMA 4 Maverick |
-| `1min.ai: 1min/gpt-oss-20b` | `1min/gpt-oss-20b` | GPT OSS 20b |
-| `1min.ai: 1min/gpt-oss-120b` | `1min/gpt-oss-120b` | GPT OSS 120b |
-
-### Perplexity Models (🌐 = web_search enabled by default)
-| What You See in List | Model ID to Use | Friendly Name |
-|---------------------|----------------|---------------|
-| `1min.ai: 1min/sonar` | `1min/sonar` | Sonar 🌐 |
-| `1min.ai: 1min/sonar-reasoning` | `1min/sonar-reasoning` | Sonar Reasoning 🌐 |
-| `1min.ai: 1min/sonar-reasoning-pro` | `1min/sonar-reasoning-pro` | Sonar Reasoning Pro 🌐 |
-
-## Model Selection Guide
-
-### For General Tasks (Fast & Cheap)
-```bash
-llm -m 1min/gpt-3.5-turbo "Quick question"
-llm -m 1min/gpt-4o-mini "Fast response"
-llm -m 1min/deepseek-chat "General chat"
-llm -m 1min/mistral-small-latest "Efficient processing"
-```
-
-### For Coding (🚀 these auto-use CODE_GENERATOR)
-```bash
-llm -m 1min/claude-4-sonnet "Write a function"  # 🚀 auto CODE_GENERATOR
-llm -m 1min/grok-code-fast-1 "Generate optimized code"  # 🚀 auto CODE_GENERATOR
-llm -m 1min/deepseek-r1 "Debug this code"  # 🚀 auto CODE_GENERATOR
-llm -m 1min/gpt-4o "Complex code analysis"
-```
-
-### For Reasoning/Logic
-```bash
-llm -m 1min/o3-mini "Solve logic puzzle"
-llm -m 1min/o4-mini "Advanced reasoning"
-llm -m 1min/deepseek-r1 "Complex math problem"
-llm -m 1min/grok-4-fast-reasoning "Fast reasoning tasks"
-llm -m 1min/sonar-reasoning "Research with reasoning"  # 🌐 auto web_search
-```
-
-### For Web-Aware Answers (🌐 these auto-enable web_search)
-```bash
-llm -m 1min/sonar "Latest news on AI"  # 🌐 auto web_search
-llm -m 1min/sonar "Current events"
-llm -m 1min/sonar-reasoning "Research with citations"  # 🌐 auto web_search
-```
-
-### For Complex Tasks
-```bash
-llm -m 1min/gpt-5 "Advanced reasoning and analysis"
-llm -m 1min/gpt-5-chat-latest "Latest GPT-5 capabilities"
-llm -m 1min/claude-4-opus "Most complex tasks"
-llm -m 1min/claude-4-sonnet "Detailed explanation"  # 🚀 auto CODE_GENERATOR
-llm -m 1min/gemini-2.5-pro "Long document analysis"
-llm -m 1min/mistral-large-latest "Complex problem solving"
-llm -m 1min/llama-3.1-405b "Open source large model"
-```
-
-### For Fast Responses
-```bash
-llm -m 1min/claude-3-haiku "Quick question"
-llm -m 1min/claude-3-5-haiku "Fast Anthropic model"
-llm -m 1min/gpt-4.1-nano "Ultra-fast responses"
-llm -m 1min/gpt-5-nano "Fast GPT-5 variant"
-llm -m 1min/gemini-2.0-flash-lite "Fast Google model"
-llm -m 1min/grok-3-mini "Fast xAI model"
-```
-
-### For Vision Tasks
-```bash
-llm -m 1min/pixtral-12b "Analyze this image"
-llm -m 1min/gpt-4o "Image and text analysis"
-```
-
-### For Open Source Models
-```bash
-llm -m 1min/llama-4-maverick "Latest Meta model"
-llm -m 1min/llama-3.1-405b "Largest open model"
-llm -m 1min/open-mistral-nemo "Open Mistral variant"
-llm -m 1min/command-r "Cohere's retrieval model"
-```
-
-## Advanced Features
-
-### Web Search with Any Model
-
-Enable web search to get real-time information:
-
-```bash
-# One-time usage
-llm -m 1min/gpt-4o -o web_search true "Latest AI developments"
-llm -m 1min/claude-4-opus -o web_search true -o num_of_site 5 "Research topic"
-
-# Set as default
-llm 1min options set web_search true
-llm 1min options set num_of_site 3
-
-# Now any model uses web search by default
-llm -m 1min/gpt-4o "Current events"
-```
-
-### Mixed Model Context
-
-Share conversation context between different models:
-
-```bash
-# Start with GPT-4o
-llm -m 1min/gpt-4o -o is_mixed true "Analyze this architecture design..."
-
-# Continue with Claude (sees GPT's response)
-llm -m 1min/claude-4-opus -o is_mixed true "What would you improve?"
-
-# Get third opinion from Gemini
-llm -m 1min/gemini-2.5-pro -o is_mixed true "Summarize the discussion"
-```
-
-### Per-Model Defaults
-
-Configure specific models with custom settings:
-
-```bash
-# GPT-4o always uses web search with 5 sites
-llm 1min options set --model gpt-4o web_search true
-llm 1min options set --model gpt-4o num_of_site 5
-
-# Sonar uses 10 sites (it's already web-aware)
-llm 1min options set --model sonar num_of_site 10
-
-# Claude uses code generator mode by default
-llm 1min options set --model claude-4-sonnet conversation_type CODE_GENERATOR
+llm 1min options migrate    # is_mixed → history_mixed
 ```
 
 ## Tips
 
-1. **Use tab completion**: Type `llm -m ` and press Tab to see available models
-2. **Bookmark your favorites**: Create aliases in your shell
-   ```bash
-   alias llm-claude='llm -m 1min/claude-sonnet-4-20250514'
-   alias llm-gpt='llm -m 1min/gpt-4o-mini'
-   alias llm-web='llm -o web_search true -o num_of_site 5'
-   ```
-3. **Check the list often**: Run `llm 1min models` to see descriptions
-4. **Try different models**: Compare outputs to find what works best
-5. **Use persistent options**: Set `llm 1min options set` for frequently used settings
-
-## Common Mistakes
-
-### Mistake 1: Using Friendly Names
-```bash
-# ❌ Wrong
-llm -m "Claude 4 Sonnet" "Hello"
-llm -m "GPT-4o Mini" "Hello"
-
-# ✅ Correct
-llm -m claude-sonnet-4-20250514 "Hello"
-llm -m gpt-4o-mini "Hello"
-```
-
-### Mistake 2: Using Spaces in Model IDs
-```bash
-# ❌ Wrong - spaces break the command
-llm -m claude sonnet 4 "Hello"
-
-# ✅ Correct - use the full ID with dashes
-llm -m claude-sonnet-4-20250514 "Hello"
-```
-
-### Mistake 3: Forgetting Quotes Around Prompt
-```bash
-# ❌ Wrong - multi-word prompts need quotes
-llm -m gpt-4o-mini Hello world
-
-# ✅ Correct
-llm -m gpt-4o-mini "Hello world"
-```
-
-## Built-in Model Defaults
-
-Some models have optimized default settings:
-
-```bash
-# View all built-in defaults
-llm 1min options defaults
-```
-
-**Code models** (auto-use `CODE_GENERATOR`):
-- `1min/claude-4-sonnet`
-- `1min/claude-3-7-sonnet`
-- `1min/grok-code-fast-1`
-- `1min/deepseek-r1`
-
-**Web-aware models** (auto-enable `web_search=true`):
-- `1min/sonar`
-- `1min/sonar-reasoning`
-- `1min/sonar-reasoning-pro`
-
-**Override any default:**
-```bash
-llm 1min options set --model <api-model-id> <key> <value>
-```
-
-## Quick Reference
-
-```bash
-# See model IDs
-llm models list | grep "1min.ai"
-
-# See model IDs with descriptions
-llm 1min models
-
-# View built-in defaults
-llm 1min options defaults
-
-# Use a model
-llm -m 1min/<model-name> "your prompt"
-
-# Continue conversation
-llm -m 1min/gpt-4o "first message"
-llm -c "follow up"  # model remembered
-
-# Examples
-llm -m 1min/gpt-4o-mini "test"
-llm -m 1min/claude-4-sonnet "write code"  # auto CODE_GENERATOR
-llm -m 1min/sonar "latest AI news"  # auto web_search
-```
-
-## Need Help?
-
-```bash
-# Show help
-llm --help
-
-# Show 1min.ai commands
-llm 1min --help
-
-# Show models with descriptions
-llm 1min models
-
-# Show built-in defaults
-llm 1min options defaults
-
-# Show all your settings
-llm 1min options list
-```
+- Tab-complete: type `llm -m 1min/` then Tab.
+- Inspect built-ins: `llm 1min options defaults`.
+- Inspect saved options: `llm 1min options list`.
+- See API request payload: `llm -m 1min/<model> -o debug true 'test'` or `LLM_1MIN_DEBUG=1`.

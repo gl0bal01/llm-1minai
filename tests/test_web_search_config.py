@@ -41,18 +41,18 @@ class TestWebSearchConfiguration:
 
             # Verify web search params were included in the API call
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
             # These should be set from config
             assert (
-                payload["promptObject"]["webSearch"] is True
+                payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
             ), "webSearch should be True from global config"
             assert (
-                payload["promptObject"]["numOfSite"] == 5
+                payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 5
             ), "numOfSite should be 5 from global config"
             assert (
-                payload["promptObject"]["maxWord"] == 1000
+                payload["promptObject"]["settings"]["webSearchSettings"]["maxWord"] == 1000
             ), "maxWord should be 1000 from global config"
 
     @patch("llm_1min.OneMinModel.get_key")
@@ -80,14 +80,14 @@ class TestWebSearchConfiguration:
 
             # Verify web search params from per-model config
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
             assert (
-                payload["promptObject"]["webSearch"] is True
+                payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
             ), "webSearch should be True from model config"
             assert (
-                payload["promptObject"]["numOfSite"] == 7
+                payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 7
             ), "numOfSite should be 7 from model config"
 
     @patch("llm_1min.OneMinModel.get_key")
@@ -118,10 +118,10 @@ class TestWebSearchConfiguration:
 
             # Verify first call has web_search
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
             assert (
-                payload["promptObject"]["webSearch"] is True
+                payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
             ), "First call should have webSearch=True"
 
             # Second message in same conversation
@@ -137,10 +137,10 @@ class TestWebSearchConfiguration:
             # Verify second call also has web_search
             call_args = mock_post.call_args_list
             # Get the second features call (should be last one)
-            features_calls = [call for call in call_args if "features" in call[0][0]]
+            features_calls = [call for call in call_args if "chat-with-ai" in call[0][0]]
             second_payload = features_calls[-1][1]["json"]
             assert (
-                second_payload["promptObject"]["webSearch"] is True
+                second_payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
             ), "Second call should also have webSearch=True"
 
     @patch("llm_1min.OneMinModel.get_key")
@@ -164,15 +164,15 @@ class TestWebSearchConfiguration:
 
             # Verify web search is NOT in payload when False
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert (
-                "webSearch" not in payload["promptObject"]
-            ), "webSearch should not be in payload when False"
-            assert (
-                "numOfSite" not in payload["promptObject"]
-            ), "numOfSite should not be in payload when web_search is False"
-            assert (
-                "maxWord" not in payload["promptObject"]
-            ), "maxWord should not be in payload when web_search is False"
+            assert "settings" not in payload["promptObject"] or "webSearchSettings" not in payload[
+                "promptObject"
+            ].get("settings", {}), "webSearch should not be in payload when False"
+            assert "settings" not in payload["promptObject"] or "webSearchSettings" not in payload[
+                "promptObject"
+            ].get("settings", {}), "numOfSite should not be in payload when web_search is False"
+            assert "settings" not in payload["promptObject"] or "webSearchSettings" not in payload[
+                "promptObject"
+            ].get("settings", {}), "maxWord should not be in payload when web_search is False"

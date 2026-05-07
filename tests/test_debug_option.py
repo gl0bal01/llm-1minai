@@ -25,6 +25,9 @@ class TestDebugOption:
 
         # Enable debug via option
         mock_llm_prompt.options.debug = True
+        mock_llm_prompt.options.brand_voice_id = "voice-secret-123"
+        mock_llm_prompt.options.images = "images/secret-key-1"
+        mock_llm_prompt.options.files = "files/secret-key-2"
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
@@ -51,6 +54,11 @@ class TestDebugOption:
         assert "web_search" in debug_output
         assert "[DEBUG] API Request Payload" in debug_output
         assert "webSearch" in debug_output
+        assert "Test prompt" not in debug_output
+        assert "<redacted:" in debug_output
+        assert "voice-secret-123" not in debug_output
+        assert "images/secret-key-1" not in debug_output
+        assert "files/secret-key-2" not in debug_output
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_debug_disabled_no_output(
@@ -112,3 +120,36 @@ class TestDebugOption:
         # Verify debug output WAS printed (from env var)
         debug_output = captured_stderr.getvalue()
         assert "[DEBUG] 1min.ai API Request Details" in debug_output
+
+    def test_redact_options_for_debug_masks_sensitive_values(self):
+        """Direct unit test for option redaction helper."""
+        options = {
+            "web_search": True,
+            "brand_voice_id": "brand-123",
+            "images": "images/key-1",
+            "files": "files/key-2",
+        }
+        redacted = llm_1min.OneMinModel._redact_options_for_debug(options)
+        assert redacted["web_search"] is True
+        assert redacted["brand_voice_id"] == "<redacted>"
+        assert redacted["images"] == "<redacted>"
+        assert redacted["files"] == "<redacted>"
+
+    def test_redact_payload_for_debug_masks_prompt_and_attachments(self):
+        """Direct unit test for payload redaction helper."""
+        payload = {
+            "type": "UNIFY_CHAT_WITH_AI",
+            "brandVoiceId": "brand-xyz",
+            "promptObject": {
+                "prompt": "super secret prompt",
+                "attachments": {
+                    "images": ["images/key-1", "images/key-2"],
+                    "files": ["files/key-1"],
+                },
+            },
+        }
+        redacted = llm_1min.OneMinModel._redact_payload_for_debug(payload)
+        assert redacted["promptObject"]["prompt"] == "<redacted:19 chars>"
+        assert redacted["promptObject"]["attachments"]["images"] == "<redacted:2 item(s)>"
+        assert redacted["promptObject"]["attachments"]["files"] == "<redacted:1 item(s)>"
+        assert redacted["brandVoiceId"] == "<redacted>"

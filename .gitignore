@@ -22,6 +22,7 @@ wheels/
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 
@@ -47,6 +48,7 @@ coverage.xml
 
 # Claude Code
 .claude/
+.omc/
 
 # Exported conversations and backups
 conversations.json

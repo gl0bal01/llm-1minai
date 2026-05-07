@@ -63,7 +63,7 @@ def mock_conversation_response():
         "conversation": {
             "uuid": "conv-uuid-456",
             "title": "Test Conversation",
-            "type": "CHAT_WITH_AI",
+            "type": "UNIFY_CHAT_WITH_AI",
             "model": "gpt-4o",
         }
     }
@@ -77,7 +77,7 @@ def mock_conversations_list():
             {
                 "uuid": "conv-1",
                 "title": "Test Chat 1",
-                "type": "CHAT_WITH_AI",
+                "type": "UNIFY_CHAT_WITH_AI",
                 "model": "gpt-4o",
                 "createdAt": "2025-11-10T10:00:00Z",
             },
@@ -150,15 +150,21 @@ def mock_requests(monkeypatch, mock_api_response_success, mock_conversation_resp
 
 @pytest.fixture
 def mock_llm_prompt():
-    """Mock LLM prompt object."""
+    """Mock LLM prompt object with v0.4.0 option defaults."""
     prompt = Mock()
     prompt.prompt = "Test prompt"
     prompt.options = Mock()
-    prompt.options.conversation_type = "CHAT_WITH_AI"
+    prompt.options.conversation_type = "UNIFY_CHAT_WITH_AI"
     prompt.options.web_search = False
     prompt.options.num_of_site = 3
-    prompt.options.max_word = 500
-    prompt.options.is_mixed = False
+    prompt.options.max_word = 1000
+    prompt.options.history_mixed = False
+    prompt.options.history_limit = 10
+    prompt.options.with_memories = False
+    prompt.options.brand_voice_id = None
+    prompt.options.images = None
+    prompt.options.files = None
+    prompt.options.debug = False
     return prompt
 
 

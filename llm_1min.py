@@ -1,5 +1,7 @@
 import json
 import os
+import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -12,20 +14,32 @@ from pydantic import Field, field_validator
 _conversation_mapping = {}
 _conversation_file = None
 
-# Model-specific defaults - code-focused models use CODE_GENERATOR by default
+# Model-specific defaults — code-focused models use CODE_GENERATOR by default,
+# web-aware models default to web_search=True.
 MODEL_DEFAULTS = {
-    # Code-focused models should use CODE_GENERATOR
+    # CODE_GENERATOR-eligible (per /api/features Code Generator spec)
+    "qwen3-coder-plus": {"conversation_type": "CODE_GENERATOR"},
+    "qwen3-coder-flash": {"conversation_type": "CODE_GENERATOR"},
+    "claude-sonnet-4-6": {"conversation_type": "CODE_GENERATOR"},
+    "claude-opus-4-6": {"conversation_type": "CODE_GENERATOR"},
+    "claude-haiku-4-5-20251001": {"conversation_type": "CODE_GENERATOR"},
+    "deepseek-reasoner": {"conversation_type": "CODE_GENERATOR"},
+    "gpt-5.1-codex": {"conversation_type": "CODE_GENERATOR"},
+    "gpt-5.1-codex-mini": {"conversation_type": "CODE_GENERATOR"},
     "grok-code-fast-1": {"conversation_type": "CODE_GENERATOR"},
-    "claude-sonnet-4-20250514": {
-        "conversation_type": "CODE_GENERATOR"
-    },  # Claude 4 Sonnet - great for code
-    "claude-3-7-sonnet-20250219": {"conversation_type": "CODE_GENERATOR"},  # Claude 3.7 Sonnet
-    "deepseek-reasoner": {"conversation_type": "CODE_GENERATOR"},  # DeepSeek R1 - strong for code
-    # Web-aware models should have web_search enabled
+    # Web-aware: enable web_search by default
+    "sonar": {"web_search": True, "num_of_site": 5},
     "sonar-pro": {"web_search": True, "num_of_site": 5},
-    "sonar-reasoning": {"web_search": True, "num_of_site": 5},
     "sonar-reasoning-pro": {"web_search": True, "num_of_site": 5},
+    "sonar-deep-research": {"web_search": True, "num_of_site": 10},
+    "o3-deep-research": {"web_search": True, "num_of_site": 5},
+    "o4-mini-deep-research": {"web_search": True, "num_of_site": 5},
 }
+
+
+def _warn(message: str) -> None:
+    """Emit warning messages to stderr."""
+    print(f"[llm-1min] Warning: {message}", file=sys.stderr)
 
 
 def _get_conversation_file():
@@ -44,20 +58,45 @@ def _load_conversations():
     conv_file = _get_conversation_file()
     if conv_file.exists():
         try:
-            with open(conv_file) as f:
-                _conversation_mapping = json.load(f)
-        except Exception:
-            _conversation_mapping = {}
+            with open(conv_file, encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                _conversation_mapping = {str(k): str(v) for k, v in loaded.items()}
+            else:
+                _warn(
+                    f"Ignoring invalid conversation mapping format in {conv_file}: "
+                    f"expected JSON object."
+                )
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as e:
+            _warn(f"Could not load conversation mapping from {conv_file}: {e}")
 
 
 def _save_conversations():
     """Save conversation mappings to disk."""
     conv_file = _get_conversation_file()
+    tmp_file_path = None
     try:
-        with open(conv_file, "w") as f:
+        conv_file.parent.mkdir(parents=True, exist_ok=True)
+        fd, tmp_file_path = tempfile.mkstemp(
+            prefix="conversations.",
+            suffix=".json.tmp",
+            dir=str(conv_file.parent),
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(_conversation_mapping, f, indent=2)
-    except Exception:
-        pass
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp_file_path, 0o600)
+        os.replace(tmp_file_path, conv_file)
+        os.chmod(conv_file, 0o600)
+    except (OSError, TypeError, ValueError) as e:
+        _warn(f"Failed to persist conversation mapping to {conv_file}: {e}")
+    finally:
+        if tmp_file_path and os.path.exists(tmp_file_path):
+            try:
+                os.unlink(tmp_file_path)
+            except OSError:
+                pass
 
 
 # Load existing conversations on module import
@@ -88,9 +127,38 @@ class OptionsConfig:
 
         try:
             with open(self.config_path) as f:
-                return json.load(f)
+                config = json.load(f)
         except Exception:
             return {"defaults": {}, "models": {}}
+
+        self._check_legacy_keys(config)
+        return config
+
+    @staticmethod
+    def _check_legacy_keys(config: Dict[str, Any]) -> None:
+        """Raise on saved config keys removed in v0.4.0."""
+        legacy_renames = {"is_mixed": "history_mixed"}
+
+        def scan(scope_name: str, options: Dict[str, Any]) -> None:
+            for old, new in legacy_renames.items():
+                if old in options:
+                    raise ValueError(
+                        f"Saved config option '{old}' (in {scope_name}) was renamed "
+                        f"to '{new}' in v0.4.0. Run: "
+                        f"`llm 1min options migrate` to auto-rename, or "
+                        f"`llm 1min options unset {old}` and "
+                        f"`llm 1min options set {new} <value>` manually."
+                    )
+
+        defaults = config.get("defaults") or {}
+        if isinstance(defaults, dict):
+            scan("defaults", defaults)
+
+        models = config.get("models") or {}
+        if isinstance(models, dict):
+            for model_id, opts in models.items():
+                if isinstance(opts, dict):
+                    scan(f"models.{model_id}", opts)
 
     def save(self, config: Dict[str, Any]) -> None:
         """Save configuration to file"""
@@ -174,12 +242,12 @@ def clear_conversation(model_id: str, api_key: str, conversation_uuid: str = Non
         True if successful, False otherwise
     """
     if conversation_uuid is None:
-        # Find conversation in mapping
+        # Find exact mapping matches for this model only:
+        # - model-only key: "1min/gpt-4o"
+        # - conversation-scoped key: "{conversation_id}_1min/gpt-4o"
         for key, uuid in list(_conversation_mapping.items()):
-            if model_id in key:
+            if key == model_id or key.endswith(f"_{model_id}"):
                 conversation_uuid = uuid
-                del _conversation_mapping[key]
-                _save_conversations()  # Persist the deletion
                 break
 
     if conversation_uuid is None:
@@ -197,7 +265,18 @@ def clear_conversation(model_id: str, api_key: str, conversation_uuid: str = Non
         )
 
         # Success codes: 200, 204, or 404 (already deleted)
-        return response.status_code in [200, 204, 404]
+        success = response.status_code in [200, 204, 404]
+        if success:
+            # Remove every local key pointing to this UUID.
+            # A single UUID can be referenced by multiple keys when history_mixed is enabled.
+            removed = False
+            for key, uuid in list(_conversation_mapping.items()):
+                if uuid == conversation_uuid:
+                    del _conversation_mapping[key]
+                    removed = True
+            if removed:
+                _save_conversations()
+        return success
     except requests.RequestException:
         return False
 
@@ -213,7 +292,9 @@ def clear_all_conversations(api_key: str) -> int:
         Number of conversations cleared
     """
     count = 0
-    for key, uuid in list(_conversation_mapping.items()):
+    any_removed = False
+    uuids = list(dict.fromkeys(_conversation_mapping.values()))
+    for uuid in uuids:
         try:
             headers = {"API-KEY": api_key, "Content-Type": "application/json"}
 
@@ -222,12 +303,15 @@ def clear_all_conversations(api_key: str) -> int:
             )
 
             if response.status_code in [200, 204, 404]:
-                del _conversation_mapping[key]
+                for key, mapped_uuid in list(_conversation_mapping.items()):
+                    if mapped_uuid == uuid:
+                        del _conversation_mapping[key]
+                        any_removed = True
                 count += 1
-        except Exception:
+        except requests.RequestException:
             continue
 
-    if count > 0:
+    if any_removed:
         _save_conversations()  # Persist the deletions
 
     return count
@@ -246,9 +330,7 @@ def get_active_conversations() -> dict:
 
 @llm.hookimpl
 def register_models(register):
-    """Register 1min.ai models with LLM"""
-    # Register with '1min/' prefix to avoid conflicts with other providers
-    # The prefix is only for the LLM tool ID, not the actual API model name
+    """Register 1min.ai models with LLM (catalog refreshed for 1min.ai API v2)."""
 
     # OpenAI Models
     register(OneMinModel("1min/gpt-3.5-turbo", "gpt-3.5-turbo", "GPT-3.5 Turbo"))
@@ -262,35 +344,70 @@ def register_models(register):
     register(OneMinModel("1min/gpt-5-mini", "gpt-5-mini", "GPT-5 Mini"))
     register(OneMinModel("1min/gpt-5-nano", "gpt-5-nano", "GPT-5 Nano"))
     register(OneMinModel("1min/gpt-5-chat-latest", "gpt-5-chat-latest", "GPT-5 Chat Latest"))
-    register(OneMinModel("1min/o3-mini", "o3-mini", "O3 Mini"))
-    register(OneMinModel("1min/o4-mini", "o4-mini", "O4 Mini"))
-    register(OneMinModel("1min/o1-mini", "o1-mini", "O1 Mini"))
+    register(OneMinModel("1min/gpt-5.1", "gpt-5.1", "GPT-5.1"))
+    register(OneMinModel("1min/gpt-5.1-codex", "gpt-5.1-codex", "GPT-5.1 Codex"))
+    register(OneMinModel("1min/gpt-5.1-codex-mini", "gpt-5.1-codex-mini", "GPT-5.1 Codex Mini"))
+    register(OneMinModel("1min/gpt-5.2", "gpt-5.2", "GPT-5.2"))
+    register(OneMinModel("1min/gpt-5.2-pro", "gpt-5.2-pro", "GPT-5.2 Pro"))
+    register(OneMinModel("1min/gpt-5.4", "gpt-5.4", "GPT-5.4"))
+    register(OneMinModel("1min/gpt-5.4-mini", "gpt-5.4-mini", "GPT-5.4 Mini"))
+    register(OneMinModel("1min/gpt-5.4-nano", "gpt-5.4-nano", "GPT-5.4 Nano"))
+    register(OneMinModel("1min/gpt-5.4-pro", "gpt-5.4-pro", "GPT-5.4 Pro"))
+    register(OneMinModel("1min/o3", "o3", "o3"))
+    register(OneMinModel("1min/o3-mini", "o3-mini", "o3 Mini"))
+    register(OneMinModel("1min/o3-pro", "o3-pro", "o3 Pro"))
+    register(OneMinModel("1min/o3-deep-research", "o3-deep-research", "o3 Deep Research"))
+    register(OneMinModel("1min/o4-mini", "o4-mini", "o4 Mini"))
+    register(
+        OneMinModel("1min/o4-mini-deep-research", "o4-mini-deep-research", "o4 Mini Deep Research")
+    )
 
     # Anthropic Models
-    register(OneMinModel("1min/claude-3-haiku", "claude-3-haiku-20240307", "Claude 3 Haiku"))
-    register(OneMinModel("1min/claude-3-5-haiku", "claude-3-5-haiku-20241022", "Claude 3.5 Haiku"))
-    register(OneMinModel("1min/claude-4-5-haiku", "claude-4-5-haiku-20251001", "Claude 4.5 Haiku"))
-    register(
-        OneMinModel("1min/claude-3-7-sonnet", "claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet")
-    )
     register(OneMinModel("1min/claude-4-sonnet", "claude-sonnet-4-20250514", "Claude 4 Sonnet"))
+    register(
+        OneMinModel("1min/claude-4-5-sonnet", "claude-sonnet-4-5-20250929", "Claude 4.5 Sonnet")
+    )
+    register(OneMinModel("1min/claude-4-6-sonnet", "claude-sonnet-4-6", "Claude 4.6 Sonnet"))
     register(OneMinModel("1min/claude-4-opus", "claude-opus-4-20250514", "Claude 4 Opus"))
+    register(OneMinModel("1min/claude-4-1-opus", "claude-opus-4-1-20250805", "Claude 4.1 Opus"))
+    register(OneMinModel("1min/claude-4-5-opus", "claude-opus-4-5-20251101", "Claude 4.5 Opus"))
+    register(OneMinModel("1min/claude-4-6-opus", "claude-opus-4-6", "Claude 4.6 Opus"))
+    register(OneMinModel("1min/claude-4-5-haiku", "claude-haiku-4-5-20251001", "Claude 4.5 Haiku"))
 
     # Google Models
-    register(OneMinModel("1min/gemini-1.5-pro", "gemini-1.5-pro", "Gemini 1.5 Pro"))
-    register(OneMinModel("1min/gemini-2.0-flash", "gemini-2.0-flash", "Gemini 2.0 Flash"))
-    register(
-        OneMinModel("1min/gemini-2.0-flash-lite", "gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite")
-    )
     register(OneMinModel("1min/gemini-2.5-flash", "gemini-2.5-flash", "Gemini 2.5 Flash"))
     register(OneMinModel("1min/gemini-2.5-pro", "gemini-2.5-pro", "Gemini 2.5 Pro"))
+    register(
+        OneMinModel("1min/gemini-3-flash", "gemini-3-flash-preview", "Gemini 3 Flash (Preview)")
+    )
+    register(
+        OneMinModel(
+            "1min/gemini-3.1-flash-lite",
+            "gemini-3.1-flash-lite-preview",
+            "Gemini 3.1 Flash Lite (Preview)",
+        )
+    )
+    register(
+        OneMinModel("1min/gemini-3.1-pro", "gemini-3.1-pro-preview", "Gemini 3.1 Pro (Preview)")
+    )
+
+    # Alibaba (Qwen) Models
+    register(OneMinModel("1min/qwen-flash", "qwen-flash", "Qwen Flash"))
+    register(OneMinModel("1min/qwen-plus", "qwen-plus", "Qwen Plus"))
+    register(OneMinModel("1min/qwen-max", "qwen-max", "Qwen Max"))
+    register(OneMinModel("1min/qwen-vl-plus", "qwen-vl-plus", "Qwen VL Plus"))
+    register(OneMinModel("1min/qwen-vl-max", "qwen-vl-max", "Qwen VL Max"))
+    register(OneMinModel("1min/qwen3-max", "qwen3-max", "Qwen3 Max"))
+    register(OneMinModel("1min/qwen3-vl-flash", "qwen3-vl-flash", "Qwen3 VL Flash"))
+    register(OneMinModel("1min/qwen3-vl-plus", "qwen3-vl-plus", "Qwen3 VL Plus"))
+    register(OneMinModel("1min/qwen3-coder-plus", "qwen3-coder-plus", "Qwen3 Coder Plus"))
+    register(OneMinModel("1min/qwen3-coder-flash", "qwen3-coder-flash", "Qwen3 Coder Flash"))
 
     # DeepSeek Models
-    register(OneMinModel("1min/deepseek-chat", "deepseek-chat", "DeepSeek Chat"))
-    register(OneMinModel("1min/deepseek-r1", "deepseek-reasoner", "DeepSeek R1"))
+    register(OneMinModel("1min/deepseek-chat", "deepseek-chat", "DeepSeek V3.2 Chat"))
+    register(OneMinModel("1min/deepseek-reasoner", "deepseek-reasoner", "DeepSeek V3.2 Reasoner"))
 
     # xAI Models
-    register(OneMinModel("1min/grok-2", "grok-2", "Grok 2"))
     register(OneMinModel("1min/grok-3", "grok-3", "Grok 3"))
     register(OneMinModel("1min/grok-3-mini", "grok-3-mini", "Grok 3 Mini"))
     register(OneMinModel("1min/grok-4", "grok-4-0709", "Grok 4"))
@@ -309,18 +426,26 @@ def register_models(register):
     # Mistral Models
     register(OneMinModel("1min/open-mistral-nemo", "open-mistral-nemo", "Mistral Open Nemo"))
     register(OneMinModel("1min/mistral-small-latest", "mistral-small-latest", "Mistral Small"))
+    register(
+        OneMinModel("1min/mistral-medium-latest", "mistral-medium-latest", "Mistral Medium 3.1")
+    )
     register(OneMinModel("1min/mistral-large-latest", "mistral-large-latest", "Mistral Large 2"))
-    register(OneMinModel("1min/pixtral-12b", "pixtral-12b", "Mistral Pixtral 12B"))
+    register(
+        OneMinModel("1min/magistral-small-latest", "magistral-small-latest", "Magistral Small 1.2")
+    )
+    register(
+        OneMinModel(
+            "1min/magistral-medium-latest", "magistral-medium-latest", "Magistral Medium 1.2"
+        )
+    )
+    register(OneMinModel("1min/ministral-14b-latest", "ministral-14b-latest", "Ministral 14B"))
 
     # Cohere Models
     register(OneMinModel("1min/command-r", "command-r-08-2024", "Command R"))
 
-    # Replicate/Meta Models
+    # Meta / open-source
     register(OneMinModel("1min/llama-2-70b", "meta/llama-2-70b-chat", "LLaMA 2 70b"))
     register(OneMinModel("1min/llama-3-70b", "meta/meta-llama-3-70b-instruct", "LLaMA 3 70b"))
-    register(
-        OneMinModel("1min/llama-3.1-405b", "meta/meta-llama-3.1-405b-instruct", "LLaMA 3.1 405b")
-    )
     register(OneMinModel("1min/llama-4-scout", "meta/llama-4-scout-instruct", "LLaMA 4 Scout"))
     register(
         OneMinModel("1min/llama-4-maverick", "meta/llama-4-maverick-instruct", "LLaMA 4 Maverick")
@@ -329,9 +454,22 @@ def register_models(register):
     register(OneMinModel("1min/gpt-oss-120b", "openai/gpt-oss-120b", "GPT OSS 120b"))
 
     # Perplexity Models
-    register(OneMinModel("1min/sonar-reasoning-pro", "sonar-reasoning-pro", "Sonar Reasoning Pro"))
-    register(OneMinModel("1min/sonar-reasoning", "sonar-reasoning", "Sonar Reasoning"))
-    register(OneMinModel("1min/sonar", "sonar-pro", "Sonar"))
+    register(OneMinModel("1min/sonar", "sonar", "Perplexity Sonar"))
+    register(OneMinModel("1min/sonar-pro", "sonar-pro", "Perplexity Sonar Pro"))
+    register(
+        OneMinModel(
+            "1min/sonar-reasoning-pro",
+            "sonar-reasoning-pro",
+            "Perplexity Sonar Reasoning Pro",
+        )
+    )
+    register(
+        OneMinModel(
+            "1min/sonar-deep-research",
+            "sonar-deep-research",
+            "Perplexity Sonar Deep Research",
+        )
+    )
 
 
 class OneMinModel(llm.Model):
@@ -341,42 +479,66 @@ class OneMinModel(llm.Model):
     This plugin integrates 1min.ai's conversational AI capabilities into LLM.
     Set your API key with: llm keys set 1min
 
-    Available models:
-    - OpenAI: gpt-3.5-turbo, gpt-4-turbo, gpt-4.1, gpt-4o, gpt-5, o1-mini, o3-mini, o4-mini
-    - Anthropic: claude-3-haiku, claude-3-5-haiku, claude-3-7-sonnet, claude-4-sonnet, claude-4-opus
-    - Google: gemini-1.5-pro, gemini-2.0-flash, gemini-2.5-flash, gemini-2.5-pro
-    - DeepSeek: deepseek-chat, deepseek-reasoner
-    - xAI: grok-2, grok-3, grok-4, grok-code-fast-1
-    - Mistral: open-mistral-nemo, mistral-small-latest, mistral-large-latest, pixtral-12b
-    - Cohere: command-r
-    - Meta: llama-2-70b, llama-3-70b, llama-3.1-405b, llama-4-scout, llama-4-maverick
-    - Perplexity: sonar, sonar-reasoning
+    Available providers (run `llm 1min models` for full IDs):
+    - OpenAI: GPT-3.5/4/4.1/4o/5/5.1/5.2/5.4 + Codex variants, o3, o4 (incl. deep-research)
+    - Anthropic: Claude 4 / 4.5 / 4.6 Sonnet, Claude 4 / 4.1 / 4.5 / 4.6 Opus, Claude 4.5 Haiku
+    - Google: Gemini 2.5 Flash/Pro, Gemini 3 / 3.1 (Preview)
+    - Alibaba: Qwen3 Max / VL / Coder, Qwen Plus / Max / Flash / VL
+    - DeepSeek: V3.2 Chat, V3.2 Reasoner
+    - xAI: Grok 3 / 4 / Code Fast
+    - Mistral: Mistral Small/Medium/Large, Magistral, Ministral, Open Mistral Nemo
+    - Cohere: Command R
+    - Meta / open-source: LLaMA 2/3/4, GPT OSS 20b/120b
+    - Perplexity: Sonar, Sonar Pro, Sonar Reasoning Pro, Sonar Deep Research
     """
 
     needs_key = "1min"
     key_env_var = "ONEMIN_API_KEY"
-    can_stream = False  # 1min.ai API doesn't appear to support streaming based on the code
+    can_stream = True  # /api/chat-with-ai supports SSE streaming with isStreaming=true
 
     class Options(llm.Options):
         conversation_type: Optional[str] = Field(
-            description="Type of conversation: CHAT_WITH_AI or CODE_GENERATOR",
-            default="CHAT_WITH_AI",
+            description="Type of conversation: UNIFY_CHAT_WITH_AI (default) or CODE_GENERATOR",
+            default="UNIFY_CHAT_WITH_AI",
         )
 
-        # Web search options
+        # webSearchSettings
         web_search: Optional[bool] = Field(
-            description="Enable web search for real-time information", default=False
+            description="Enable web search for grounding responses", default=False
         )
         num_of_site: Optional[int] = Field(
             description="Number of sites to search when web_search is enabled (1-10)", default=3
         )
         max_word: Optional[int] = Field(
-            description="Maximum words to extract from web search results", default=500
+            description="Maximum words to extract from web search results (100-10000)",
+            default=1000,
         )
 
-        # Mixed model context
-        is_mixed: Optional[bool] = Field(
-            description="Mix context between different models in conversation", default=False
+        # historySettings
+        history_mixed: Optional[bool] = Field(
+            description="Mix context from different AI models in conversation history",
+            default=False,
+        )
+        history_limit: Optional[int] = Field(
+            description="Maximum number of history messages to include as context (1-50)",
+            default=10,
+        )
+
+        # Memory + brand voice
+        with_memories: Optional[bool] = Field(
+            description="Enable AI memory across conversations", default=False
+        )
+        brand_voice_id: Optional[str] = Field(
+            description="Brand voice ID to apply a custom tone/style to the response",
+            default=None,
+        )
+
+        # Attachments (comma-separated keys/IDs from Asset API)
+        images: Optional[str] = Field(
+            description="Comma-separated image asset keys (from Asset API)", default=None
+        )
+        files: Optional[str] = Field(
+            description="Comma-separated file IDs (from Asset API)", default=None
         )
 
         # Debug mode
@@ -387,15 +549,29 @@ class OneMinModel(llm.Model):
         @field_validator("conversation_type")
         @classmethod
         def validate_conversation_type(cls, conv_type):
-            if conv_type not in ["CHAT_WITH_AI", "CODE_GENERATOR"]:
-                raise ValueError("conversation_type must be CHAT_WITH_AI or CODE_GENERATOR")
+            if conv_type not in ["UNIFY_CHAT_WITH_AI", "CODE_GENERATOR"]:
+                raise ValueError("conversation_type must be UNIFY_CHAT_WITH_AI or CODE_GENERATOR")
             return conv_type
 
         @field_validator("num_of_site")
         @classmethod
         def validate_num_of_site(cls, value):
-            if value < 1 or value > 10:
+            if value is not None and (value < 1 or value > 10):
                 raise ValueError("num_of_site must be between 1 and 10")
+            return value
+
+        @field_validator("max_word")
+        @classmethod
+        def validate_max_word(cls, value):
+            if value is not None and (value < 100 or value > 10000):
+                raise ValueError("max_word must be between 100 and 10000")
+            return value
+
+        @field_validator("history_limit")
+        @classmethod
+        def validate_history_limit(cls, value):
+            if value is not None and (value < 1 or value > 50):
+                raise ValueError("history_limit must be between 1 and 50")
             return value
 
     def __init__(self, llm_model_id, api_model_id, display_name=None):
@@ -415,7 +591,7 @@ class OneMinModel(llm.Model):
         # Show model_id (what users need to use with -m flag)
         return f"1min.ai: {self.model_id}"
 
-    def get_or_create_conversation(self, key, conversation, prompt):
+    def get_or_create_conversation(self, key, conversation, prompt, conversation_type=None):
         """
         Get existing 1min.ai conversation UUID or create a new one.
 
@@ -423,6 +599,8 @@ class OneMinModel(llm.Model):
             key: API key
             conversation: LLM conversation object (may be None)
             prompt: LLM prompt object
+            conversation_type: Override conversation type for new conversations.
+                If None, falls back to prompt.options.conversation_type.
 
         Returns:
             1min.ai conversation UUID
@@ -437,10 +615,11 @@ class OneMinModel(llm.Model):
             "yes",
         )
         if debug_mode:
-            import sys
-
             print("\n[DEBUG] Conversation info:", file=sys.stderr)
-            print(f"  conversation object: {conversation}", file=sys.stderr)
+            print(
+                f"  conversation type: {type(conversation).__name__ if conversation else 'None'}",
+                file=sys.stderr,
+            )
             if conversation:
                 print(f"  conversation.id: {getattr(conversation, 'id', 'N/A')}", file=sys.stderr)
                 print(
@@ -448,15 +627,14 @@ class OneMinModel(llm.Model):
                 )
 
         # Generate keys for this conversation
-        # If is_mixed is enabled, use conversation ID only (shared across models)
+        # If history_mixed is enabled, use conversation ID only (shared across models)
         # Otherwise, use conversation ID + model ID (separate per model)
-        # Check if is_mixed option is enabled (from CLI or config)
-        is_mixed = prompt.options.is_mixed
+        history_mixed = prompt.options.history_mixed
 
         model_only_key = f"{self.model_id}"
         conv_specific_key = None
         if conversation and hasattr(conversation, "id"):
-            if is_mixed:
+            if history_mixed:
                 # Use conversation ID only - shared across all models
                 conv_specific_key = f"{conversation.id}"
             else:
@@ -464,8 +642,6 @@ class OneMinModel(llm.Model):
                 conv_specific_key = f"{conversation.id}_{self.model_id}"
 
         if debug_mode:
-            import sys
-
             print(f"  model_only_key: {model_only_key}", file=sys.stderr)
             print(f"  conv_specific_key: {conv_specific_key}", file=sys.stderr)
             print(f"  existing mappings: {list(_conversation_mapping.keys())}", file=sys.stderr)
@@ -476,8 +652,6 @@ class OneMinModel(llm.Model):
         if conv_specific_key and conv_specific_key in _conversation_mapping:
             conversation_uuid = _conversation_mapping[conv_specific_key]
             if debug_mode:
-                import sys
-
                 print(f"  ✓ Found via conv_specific_key: {conversation_uuid}", file=sys.stderr)
         elif model_only_key in _conversation_mapping:
             conversation_uuid = _conversation_mapping[model_only_key]
@@ -487,19 +661,15 @@ class OneMinModel(llm.Model):
                 del _conversation_mapping[model_only_key]
                 _save_conversations()
                 if debug_mode:
-                    import sys
-
                     print(
                         f"  ✓ Migrated from model_only_key to conv_specific_key: {conversation_uuid}",
                         file=sys.stderr,
                     )
             else:
                 if debug_mode:
-                    import sys
-
                     print(f"  ✓ Found via model_only_key: {conversation_uuid}", file=sys.stderr)
-        elif is_mixed and conversation and hasattr(conversation, "id"):
-            # For is_mixed, check if there's a conversation from another model
+        elif history_mixed and conversation and hasattr(conversation, "id"):
+            # For history_mixed, check if there's a conversation from another model
             # with this same LLM conversation ID that we can reuse
             for key, uuid in list(_conversation_mapping.items()):
                 if key.startswith(f"{conversation.id}_"):
@@ -509,8 +679,6 @@ class OneMinModel(llm.Model):
                     del _conversation_mapping[key]
                     _save_conversations()
                     if debug_mode:
-                        import sys
-
                         print(
                             f"  ✓ Found conversation from other model, migrated to shared key: {conversation_uuid}",
                             file=sys.stderr,
@@ -527,13 +695,13 @@ class OneMinModel(llm.Model):
         conv_key = conv_specific_key if conv_specific_key else model_only_key
 
         # Create a new 1min.ai conversation
-        conversation_type = prompt.options.conversation_type or "CHAT_WITH_AI"
+        conv_type = conversation_type or prompt.options.conversation_type or "UNIFY_CHAT_WITH_AI"
 
         headers = {"API-KEY": key, "Content-Type": "application/json"}
 
         payload = {
             "title": f"LLM Chat - {self.display_name}",
-            "type": conversation_type,
+            "type": conv_type,
             "model": self.api_model_id,  # Use actual API model ID, not LLM ID
         }
 
@@ -548,8 +716,6 @@ class OneMinModel(llm.Model):
             _save_conversations()  # Persist to disk
 
             if debug_mode:
-                import sys
-
                 print(f"  ✓ Created new conversation: {conversation_uuid}", file=sys.stderr)
                 print(f"  ✓ Stored with key: {conv_key}", file=sys.stderr)
 
@@ -560,146 +726,314 @@ class OneMinModel(llm.Model):
 
     def execute(self, prompt, stream, response, conversation):
         """Execute a prompt against the 1min.ai API"""
-        # Get API key
         key = self.get_key()
 
         # Load options from config (global + per-model)
         global_options = _options_config.get_defaults()
         model_options = _options_config.get_model_options(self.api_model_id)
-
-        # Get built-in model defaults (for code models, web-aware models, etc.)
         builtin_defaults = MODEL_DEFAULTS.get(self.api_model_id, {})
 
-        # Merge options: builtin < global < model-specific < CLI
+        # Merge: builtin < global < model-specific < CLI
         merged_options = {**builtin_defaults, **global_options, **model_options}
 
-        # CLI options override everything (only if explicitly set)
         cli_options = {}
-        if prompt.options.conversation_type != "CHAT_WITH_AI":  # If not default
-            cli_options["conversation_type"] = prompt.options.conversation_type
-        if prompt.options.web_search is not False:  # If not default
-            cli_options["web_search"] = prompt.options.web_search
-        if prompt.options.num_of_site != 3:  # If not default
-            cli_options["num_of_site"] = prompt.options.num_of_site
-        if prompt.options.max_word != 500:  # If not default
-            cli_options["max_word"] = prompt.options.max_word
-        if prompt.options.is_mixed is not False:  # If not default
-            cli_options["is_mixed"] = prompt.options.is_mixed
+        opts = prompt.options
+        if opts.conversation_type != "UNIFY_CHAT_WITH_AI":
+            cli_options["conversation_type"] = opts.conversation_type
+        if opts.web_search is not False:
+            cli_options["web_search"] = opts.web_search
+        if opts.num_of_site != 3:
+            cli_options["num_of_site"] = opts.num_of_site
+        if opts.max_word != 1000:
+            cli_options["max_word"] = opts.max_word
+        if opts.history_mixed is not False:
+            cli_options["history_mixed"] = opts.history_mixed
+        if opts.history_limit != 10:
+            cli_options["history_limit"] = opts.history_limit
+        if opts.with_memories is not False:
+            cli_options["with_memories"] = opts.with_memories
+        if opts.brand_voice_id is not None:
+            cli_options["brand_voice_id"] = opts.brand_voice_id
+        if opts.images is not None:
+            cli_options["images"] = opts.images
+        if opts.files is not None:
+            cli_options["files"] = opts.files
 
-        # Apply CLI overrides
         merged_options.update(cli_options)
 
-        # Debug logging (enabled via -o debug true OR LLM_1MIN_DEBUG env var)
-        debug_mode = prompt.options.debug or os.environ.get("LLM_1MIN_DEBUG", "").lower() in (
+        debug_mode = opts.debug or os.environ.get("LLM_1MIN_DEBUG", "").lower() in (
             "1",
             "true",
             "yes",
         )
         if debug_mode:
-            import sys
-
+            redacted_global_options = self._redact_options_for_debug(global_options)
+            redacted_model_options = self._redact_options_for_debug(model_options)
+            redacted_cli_options = self._redact_options_for_debug(cli_options)
+            redacted_merged_options = self._redact_options_for_debug(merged_options)
             print(f"\n{'=' * 70}", file=sys.stderr)
             print("[DEBUG] 1min.ai API Request Details", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
             print(f"Model: {self.api_model_id}", file=sys.stderr)
             print("\nOptions (priority: CLI > user config > built-in defaults):", file=sys.stderr)
             print(f"  Built-in model defaults: {builtin_defaults}", file=sys.stderr)
-            print(f"  User global options: {global_options}", file=sys.stderr)
-            print(f"  User model-specific options: {model_options}", file=sys.stderr)
-            print(f"  CLI options: {cli_options}", file=sys.stderr)
+            print(f"  User global options: {redacted_global_options}", file=sys.stderr)
+            print(f"  User model-specific options: {redacted_model_options}", file=sys.stderr)
+            print(f"  CLI options: {redacted_cli_options}", file=sys.stderr)
             print("\nFinal merged options:", file=sys.stderr)
-            print(f"  {merged_options}", file=sys.stderr)
+            print(f"  {redacted_merged_options}", file=sys.stderr)
             print(f"{'=' * 70}", file=sys.stderr)
 
-        # Get or create 1min.ai conversation
-        conversation_uuid = self.get_or_create_conversation(key, conversation, prompt)
-
-        # Determine conversation type
-        conversation_type = merged_options.get(
-            "conversation_type", prompt.options.conversation_type
+        conversation_type = merged_options.get("conversation_type", "UNIFY_CHAT_WITH_AI")
+        conversation_uuid = self.get_or_create_conversation(
+            key, conversation, prompt, conversation_type=conversation_type
         )
 
-        # Build promptObject with all options
-        prompt_object = {"prompt": prompt.prompt}
+        if conversation_type == "CODE_GENERATOR":
+            yield from self._execute_feature(
+                key, prompt, conversation_uuid, merged_options, debug_mode, conversation
+            )
+        else:
+            yield from self._execute_chat(
+                key, prompt, conversation_uuid, merged_options, debug_mode, stream, conversation
+            )
 
-        # Add optional parameters if enabled
-        if merged_options.get("web_search", False):
-            prompt_object["webSearch"] = True
-            prompt_object["numOfSite"] = merged_options.get("num_of_site", 3)
-            prompt_object["maxWord"] = merged_options.get("max_word", 500)
+    def _build_mixed_prompt(self, prompt, conversation, limit):
+        """Inline prior LLM-DB turns into the prompt for cross-model recall."""
+        responses = getattr(conversation, "responses", None) or []
+        if not responses:
+            return prompt.prompt
+        recent = responses[-limit:] if limit and limit > 0 else responses
+        lines = []
+        for r in recent:
+            prior_prompt = getattr(getattr(r, "prompt", None), "prompt", "") or ""
+            try:
+                prior_text = r.text()
+            except Exception:
+                prior_text = ""
+            if prior_prompt:
+                lines.append(f"User: {prior_prompt}")
+            if prior_text:
+                lines.append(f"Assistant: {prior_text}")
+        if not lines:
+            return prompt.prompt
+        return "\n".join(lines) + f"\n\nUser: {prompt.prompt}"
 
-        if merged_options.get("is_mixed", False):
-            prompt_object["isMixed"] = True
+    def _execute_chat(
+        self, key, prompt, conversation_uuid, merged, debug_mode, stream, conversation=None
+    ):
+        """POST /api/chat-with-ai with type=UNIFY_CHAT_WITH_AI."""
+        prompt_text = prompt.prompt
+        if merged.get("history_mixed", False) and conversation is not None:
+            prompt_text = self._build_mixed_prompt(
+                prompt, conversation, merged.get("history_limit", 10)
+            )
+        prompt_object = {"prompt": prompt_text}
+        if conversation_uuid:
+            prompt_object["conversationId"] = conversation_uuid
 
-        # Build request payload for 1min.ai /api/features endpoint
-        headers = {"API-KEY": key, "Content-Type": "application/json"}
+        settings = {}
+        if merged.get("web_search", False):
+            settings["webSearchSettings"] = {
+                "webSearch": True,
+                "numOfSite": merged.get("num_of_site", 3),
+                "maxWord": merged.get("max_word", 1000),
+            }
+        if merged.get("history_mixed", False) or merged.get("history_limit", 10) != 10:
+            settings["historySettings"] = {
+                "isMixed": merged.get("history_mixed", False),
+                "historyMessageLimit": merged.get("history_limit", 10),
+            }
+        if merged.get("with_memories", False):
+            settings["withMemories"] = True
+        if settings:
+            prompt_object["settings"] = settings
+
+        attachments = {}
+        if merged.get("images"):
+            attachments["images"] = [
+                s.strip() for s in str(merged["images"]).split(",") if s.strip()
+            ]
+        if merged.get("files"):
+            attachments["files"] = [s.strip() for s in str(merged["files"]).split(",") if s.strip()]
+        if attachments:
+            prompt_object["attachments"] = attachments
 
         payload = {
-            "type": conversation_type,
-            "model": self.api_model_id,  # Use actual API model ID, not LLM ID
-            "conversationId": conversation_uuid,
+            "type": "UNIFY_CHAT_WITH_AI",
+            "model": self.api_model_id,
             "promptObject": prompt_object,
         }
+        if merged.get("brand_voice_id"):
+            payload["brandVoiceId"] = merged["brand_voice_id"]
 
-        # Debug logging for payload
-        if debug_mode:
-            import sys
+        url = "https://api.1min.ai/api/chat-with-ai"
+        if stream:
+            url = url + "?isStreaming=true"
 
-            print(f"\n{'=' * 70}", file=sys.stderr)
-            print("[DEBUG] API Request Payload", file=sys.stderr)
-            print(f"{'=' * 70}", file=sys.stderr)
-            print("Endpoint: https://api.1min.ai/api/features", file=sys.stderr)
-            print("\nPayload:", file=sys.stderr)
-            print(json.dumps(payload, indent=2), file=sys.stderr)
-            print(f"{'=' * 70}\n", file=sys.stderr)
+        headers = {"API-KEY": key, "Content-Type": "application/json"}
 
-        # Make the API request
+        self._log_payload(url, payload, debug_mode)
+
         try:
-            api_response = requests.post(
-                "https://api.1min.ai/api/features",
-                headers=headers,
-                json=payload,
-                timeout=60,  # Longer timeout for AI responses
-            )
-            api_response.raise_for_status()
-
-            # Parse response - based on actual Discord bot implementation
-            result_data = api_response.json()
-
-            # Try to extract the result from the response
-            result_object = None
-
-            if result_data.get("aiRecord", {}).get("aiRecordDetail", {}).get("resultObject"):
-                result_object = result_data["aiRecord"]["aiRecordDetail"]["resultObject"]
-            elif result_data.get("result", {}).get("response"):
-                result_object = result_data["result"]["response"]
-            elif "data" in result_data:
-                result_object = result_data["data"]
+            if stream:
+                yield from self._stream_chat(url, headers, payload)
             else:
-                # Fallback: stringify the whole response
-                result_object = result_data
-
-            # Convert to readable string
-            if isinstance(result_object, list):
-                result_text = "\n".join(str(item) for item in result_object)
-            elif isinstance(result_object, dict):
-                result_text = json.dumps(result_object, indent=2)
-            else:
-                result_text = str(result_object)
-
-            yield result_text
-
+                api_response = requests.post(url, headers=headers, json=payload, timeout=120)
+                api_response.raise_for_status()
+                result_data = api_response.json()
+                yield self._extract_result_text(result_data)
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 401:
-                raise llm.ModelError("Authentication failed. Please check your API key.")
-            elif e.response.status_code == 429:
-                raise llm.ModelError("Rate limit exceeded. Please try again later.")
-            else:
-                raise llm.ModelError(f"API request failed: {str(e)}")
+            self._raise_http_error(e)
         except requests.exceptions.RequestException as e:
             raise llm.ModelError(f"API request failed: {str(e)}")
         except (KeyError, json.JSONDecodeError) as e:
             raise llm.ModelError(f"Failed to parse API response: {str(e)}")
+
+    def _stream_chat(self, url, headers, payload):
+        """Parse SSE stream from /api/chat-with-ai."""
+        with requests.post(url, headers=headers, json=payload, stream=True, timeout=120) as r:
+            r.raise_for_status()
+            event_name = None
+            for raw_line in r.iter_lines(decode_unicode=True):
+                if raw_line is None:
+                    continue
+                line = raw_line.strip()
+                if not line:
+                    event_name = None
+                    continue
+                if line.startswith("event:"):
+                    event_name = line[len("event:") :].strip()
+                    continue
+                if line.startswith("data:"):
+                    data_str = line[len("data:") :].strip()
+                    if not data_str:
+                        continue
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        continue
+                    if event_name == "content":
+                        chunk = data.get("content", "")
+                        if chunk:
+                            yield chunk
+                    elif event_name == "error":
+                        msg = data.get("message") or data.get("error") or "Unknown stream error"
+                        raise llm.ModelError(f"Stream error: {msg}")
+                    elif event_name == "done":
+                        return
+                    # event_name == "result" -> ignore (final aiRecord; chunks already yielded)
+
+    def _execute_feature(
+        self, key, prompt, conversation_uuid, merged, debug_mode, conversation=None
+    ):
+        """POST /api/features with type=CODE_GENERATOR (legacy flat shape)."""
+        prompt_text = prompt.prompt
+        if merged.get("history_mixed", False) and conversation is not None:
+            prompt_text = self._build_mixed_prompt(
+                prompt, conversation, merged.get("history_limit", 10)
+            )
+        prompt_object = {"prompt": prompt_text}
+        if merged.get("web_search", False):
+            prompt_object["webSearch"] = True
+            prompt_object["numOfSite"] = merged.get("num_of_site", 3)
+            prompt_object["maxWord"] = merged.get("max_word", 1000)
+
+        payload = {
+            "type": "CODE_GENERATOR",
+            "model": self.api_model_id,
+            "conversationId": conversation_uuid,
+            "promptObject": prompt_object,
+        }
+
+        url = "https://api.1min.ai/api/features"
+        headers = {"API-KEY": key, "Content-Type": "application/json"}
+
+        self._log_payload(url, payload, debug_mode)
+
+        try:
+            api_response = requests.post(url, headers=headers, json=payload, timeout=120)
+            api_response.raise_for_status()
+            yield self._extract_result_text(api_response.json())
+        except requests.exceptions.HTTPError as e:
+            self._raise_http_error(e)
+        except requests.exceptions.RequestException as e:
+            raise llm.ModelError(f"API request failed: {str(e)}")
+        except (KeyError, json.JSONDecodeError) as e:
+            raise llm.ModelError(f"Failed to parse API response: {str(e)}")
+
+    @staticmethod
+    def _extract_result_text(result_data):
+        """Pull human-readable text out of an aiRecord response body.
+
+        Spec: `aiRecord.aiRecordDetail.resultObject` is a list[str].
+        """
+        detail = result_data.get("aiRecord", {}).get("aiRecordDetail", {})
+        result_object = detail.get("resultObject")
+        if result_object is None:
+            # Defensive: surface the raw body so failures aren't silent.
+            return json.dumps(result_data, indent=2)
+        if isinstance(result_object, list):
+            return "\n".join(str(item) for item in result_object)
+        if isinstance(result_object, dict):
+            return json.dumps(result_object, indent=2)
+        return str(result_object)
+
+    @staticmethod
+    def _raise_http_error(e):
+        status = getattr(e.response, "status_code", None)
+        if status == 401:
+            raise llm.ModelError("Authentication failed. Please check your API key.")
+        if status == 429:
+            raise llm.ModelError("Rate limit exceeded. Please try again later.")
+        raise llm.ModelError(f"API request failed: {str(e)}")
+
+    @staticmethod
+    def _log_payload(url, payload, debug_mode):
+        """Print the API request payload to stderr when debug is on."""
+        if not debug_mode:
+            return
+        redacted_payload = OneMinModel._redact_payload_for_debug(payload)
+        print(f"\n{'=' * 70}", file=sys.stderr)
+        print("[DEBUG] API Request Payload (sensitive fields redacted)", file=sys.stderr)
+        print(f"{'=' * 70}", file=sys.stderr)
+        print(f"Endpoint: {url}", file=sys.stderr)
+        print("\nPayload:", file=sys.stderr)
+        print(json.dumps(redacted_payload, indent=2), file=sys.stderr)
+        print(f"{'=' * 70}\n", file=sys.stderr)
+
+    @staticmethod
+    def _redact_options_for_debug(options):
+        """Redact sensitive option values before logging."""
+        redacted = {}
+        for key, value in options.items():
+            if key in {"images", "files", "brand_voice_id"} and value is not None:
+                redacted[key] = "<redacted>"
+            else:
+                redacted[key] = value
+        return redacted
+
+    @staticmethod
+    def _redact_payload_for_debug(payload):
+        """Redact prompt and attachment identifiers before logging payloads."""
+        safe_payload = json.loads(json.dumps(payload))
+        prompt_object = safe_payload.get("promptObject", {})
+        prompt_text = prompt_object.get("prompt")
+        if isinstance(prompt_text, str):
+            prompt_object["prompt"] = f"<redacted:{len(prompt_text)} chars>"
+
+        attachments = prompt_object.get("attachments")
+        if isinstance(attachments, dict):
+            for attachment_key in ("images", "files"):
+                if attachment_key in attachments:
+                    value = attachments.get(attachment_key)
+                    count = len(value) if isinstance(value, list) else 1
+                    attachments[attachment_key] = f"<redacted:{count} item(s)>"
+
+        if safe_payload.get("brandVoiceId"):
+            safe_payload["brandVoiceId"] = "<redacted>"
+
+        return safe_payload
 
 
 @llm.hookimpl
@@ -726,90 +1060,33 @@ def register_commands(cli):
 
     @onemin_group.command(name="models")
     def list_models():
-        """List all available 1min.ai models with descriptions.
+        """List all available 1min.ai models.
 
-        Shows 66+ models from OpenAI, Anthropic, Google, xAI, Mistral, Meta,
-        DeepSeek, Cohere, and Perplexity.
+        Roster is derived from register_models(); registration order also
+        controls grouping in the output.
 
         Example:
           llm 1min models | grep -i claude
         """
-        models = [
-            # OpenAI Models
-            ("1min/gpt-3.5-turbo", "GPT-3.5 Turbo", "Fast and economical OpenAI model"),
-            ("1min/gpt-4-turbo", "GPT-4 Turbo", "Enhanced GPT-4 with speed improvements"),
-            ("1min/gpt-4.1", "GPT-4.1", "Latest GPT-4 series model"),
-            ("1min/gpt-4.1-mini", "GPT-4.1 Mini", "Compact GPT-4.1 variant"),
-            ("1min/gpt-4.1-nano", "GPT-4.1 Nano", "Ultra-compact GPT-4.1 variant"),
-            ("1min/gpt-4o-mini", "GPT-4o Mini", "Fast and cost-effective OpenAI model"),
-            ("1min/gpt-4o", "GPT-4o", "Omni-modal GPT-4 model"),
-            ("1min/gpt-5", "GPT-5", "Latest OpenAI flagship model"),
-            ("1min/gpt-5-mini", "GPT-5 Mini", "Compact GPT-5 variant"),
-            ("1min/gpt-5-nano", "GPT-5 Nano", "Ultra-compact GPT-5 variant"),
-            ("1min/gpt-5-chat-latest", "GPT-5 Chat Latest", "Latest GPT-5 chat variant"),
-            ("1min/o1-mini", "O1 Mini", "OpenAI reasoning model"),
-            ("1min/o3-mini", "O3 Mini", "Reasoning-focused OpenAI model"),
-            ("1min/o4-mini", "O4 Mini", "Latest reasoning-focused model"),
-            # Anthropic Models
-            ("1min/claude-3-haiku", "Claude 3 Haiku", "Fast and compact Anthropic model"),
-            ("1min/claude-3-5-haiku", "Claude 3.5 Haiku", "Enhanced fast Anthropic model"),
-            ("1min/claude-3-7-sonnet", "Claude 3.7 Sonnet", "Advanced Anthropic model"),
-            ("1min/claude-4-sonnet", "Claude 4 Sonnet", "Anthropic Sonnet model"),
-            ("1min/claude-4-opus", "Claude 4 Opus", "Most powerful Anthropic model"),
-            # Google Models
-            ("1min/gemini-1.5-pro", "Gemini 1.5 Pro", "Google's advanced model"),
-            ("1min/gemini-2.0-flash", "Gemini 2.0 Flash", "Fast Gemini 2.0 variant"),
-            ("1min/gemini-2.0-flash-lite", "Gemini 2.0 Flash Lite", "Compact Gemini 2.0 Flash"),
-            ("1min/gemini-2.5-flash", "Gemini 2.5 Flash", "Latest fast Gemini model"),
-            ("1min/gemini-2.5-pro", "Gemini 2.5 Pro", "Latest Gemini Pro model"),
-            # DeepSeek Models
-            ("1min/deepseek-chat", "DeepSeek Chat", "DeepSeek conversational model"),
-            ("1min/deepseek-r1", "DeepSeek R1", "DeepSeek reasoning model"),
-            # xAI Models
-            ("1min/grok-2", "Grok 2", "xAI's Grok model"),
-            ("1min/grok-3", "Grok 3", "Latest xAI Grok model"),
-            ("1min/grok-3-mini", "Grok 3 Mini", "Compact Grok 3 variant"),
-            ("1min/grok-4", "Grok 4", "Newest xAI Grok model"),
-            (
-                "1min/grok-4-fast-non-reasoning",
-                "Grok 4 Fast Non-Reasoning",
-                "Fast Grok 4 without reasoning",
-            ),
-            ("1min/grok-4-fast-reasoning", "Grok 4 Fast Reasoning", "Fast Grok 4 with reasoning"),
-            ("1min/grok-code-fast-1", "Grok Code Fast 1", "xAI's fast code generation model"),
-            # Mistral Models
-            ("1min/open-mistral-nemo", "Mistral Open Nemo", "Open Mistral model"),
-            ("1min/mistral-small-latest", "Mistral Small", "Compact Mistral model"),
-            ("1min/mistral-large-latest", "Mistral Large 2", "Most capable Mistral model"),
-            ("1min/pixtral-12b", "Mistral Pixtral 12B", "Mistral vision model"),
-            # Cohere Models
-            ("1min/command-r", "Command R", "Cohere's Command R model"),
-            # Meta/LLaMA Models
-            ("1min/llama-2-70b", "LLaMA 2 70b", "Meta's LLaMA 2 70B model"),
-            ("1min/llama-3-70b", "LLaMA 3 70b", "Meta's LLaMA 3 70B model"),
-            ("1min/llama-3.1-405b", "LLaMA 3.1 405b", "Meta's largest LLaMA model"),
-            ("1min/llama-4-scout", "LLaMA 4 Scout", "LLaMA 4 Scout variant"),
-            ("1min/llama-4-maverick", "LLaMA 4 Maverick", "LLaMA 4 Maverick variant"),
-            ("1min/gpt-oss-20b", "GPT OSS 20b", "Open-source GPT 20B model"),
-            ("1min/gpt-oss-120b", "GPT OSS 120b", "Open-source GPT 120B model"),
-            # Perplexity Models
-            ("1min/sonar-pro", "Sonar", "Perplexity web-aware model"),
-            ("1min/sonar-reasoning", "Sonar Reasoning", "Perplexity with reasoning capabilities"),
-            (
-                "1min/sonar-reasoning-pro",
-                "Sonar Reasoning Pro",
-                "Perplexity with reasoning capabilities",
-            ),
-        ]
+        captured = []
+        register_models(lambda m: captured.append(m))
 
-        click.echo("Available 1min.ai models:\n")
-        for model_id, name, description in models:
-            click.echo(f"  {click.style(model_id, fg='cyan', bold=True)}")
-            click.echo(f"    Name: {name}")
-            click.echo(f"    Description: {description}")
+        click.echo(f"Available 1min.ai models ({len(captured)} total):\n")
+        for m in captured:
+            defaults = MODEL_DEFAULTS.get(m.api_model_id, {})
+            tags = []
+            if defaults.get("conversation_type") == "CODE_GENERATOR":
+                tags.append("code")
+            if defaults.get("web_search"):
+                tags.append("web")
+            tag_str = f"  [{', '.join(tags)}]" if tags else ""
+            click.echo(f"  {click.style(m.model_id, fg='cyan', bold=True)}{tag_str}")
+            click.echo(f"    Name: {m.display_name}")
+            click.echo(f"    API: {m.api_model_id}")
             click.echo()
 
-        click.echo("Usage:")
+        click.echo("Tags: [code]=auto CODE_GENERATOR, [web]=auto web_search")
+        click.echo("\nUsage:")
         click.echo('  llm -m <model-id> "your prompt"')
         click.echo("\nExample:")
         click.echo('  llm -m 1min/gpt-4o-mini "Explain Python decorators"')
@@ -874,6 +1151,64 @@ def register_commands(cli):
         else:
             click.echo("Error: Specify --model or --all", err=True)
 
+    @onemin_group.command(name="upload")
+    @click.argument("file", type=click.Path(exists=True, dir_okay=False, readable=True))
+    @click.option("--quiet", "-q", is_flag=True, help="Print only the asset key (no usage hint)")
+    def upload_asset(file, quiet):
+        """Upload an image or file to the 1min.ai Asset API.
+
+        Prints the asset key returned by the server. Pass that key to
+        the `images` or `files` option on a model invocation.
+
+        Examples:
+          llm 1min upload photo.png
+          KEY=$(llm 1min upload -q photo.png)
+          llm -m 1min/gpt-4o -o images "$KEY" "What is in this image?"
+        """
+        api_key = os.environ.get("ONEMIN_API_KEY")
+        if not api_key:
+            try:
+                temp_model = OneMinModel("1min/gpt-4o-mini", "gpt-4o-mini", "GPT-4o Mini")
+                api_key = temp_model.get_key()
+            except Exception:
+                click.echo(
+                    "Error: No API key found. Set ONEMIN_API_KEY or use 'llm keys set 1min'",
+                    err=True,
+                )
+                sys.exit(1)
+
+        try:
+            with open(file, "rb") as fh:
+                response = requests.post(
+                    "https://api.1min.ai/api/assets",
+                    headers={"API-KEY": api_key},
+                    files={"asset": (os.path.basename(file), fh)},
+                    timeout=120,
+                )
+            response.raise_for_status()
+            asset = response.json().get("asset") or {}
+            key = asset.get("key")
+            if not key:
+                click.echo(f"Error: Upload succeeded but no key in response: {response.text}", err=True)
+                sys.exit(1)
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "?"
+            body = e.response.text if e.response is not None else str(e)
+            click.echo(f"Error: Upload failed (HTTP {status}): {body}", err=True)
+            sys.exit(1)
+        except requests.exceptions.RequestException as e:
+            click.echo(f"Error: Upload failed: {e}", err=True)
+            sys.exit(1)
+
+        if quiet:
+            click.echo(key)
+            return
+
+        opt = "images" if key.startswith("images/") else "files"
+        click.echo(key)
+        click.echo("", err=True)
+        click.echo(f'Use: llm -m 1min/<model> -o {opt} "{key}" "your prompt"', err=True)
+
     @onemin_group.group(name="options")
     def options_group():
         """Manage persistent configuration options.
@@ -882,17 +1217,23 @@ def register_commands(cli):
         Settings can be global or per-model.
 
         Available options:
+          - conversation_type (UNIFY_CHAT_WITH_AI / CODE_GENERATOR)
           - web_search (true/false): Enable web search
-          - num_of_site (1-10): Sites to search
-          - max_word (number): Max words from search
-          - conversation_type (CHAT_WITH_AI/CODE_GENERATOR)
-          - is_mixed (true/false): Mix model contexts
+          - num_of_site (1-10): Sites to search when web_search is enabled
+          - max_word (100-10000): Max words from web search results
+          - history_mixed (true/false): Mix model contexts in conversation history
+          - history_limit (1-50): Max history messages included as context
+          - with_memories (true/false): Enable AI memory across conversations
+          - brand_voice_id (string): Brand voice ID for response style
+          - images (csv): Image asset keys (from Asset API), comma-separated
+          - files (csv): File IDs (from Asset API), comma-separated
           - debug (true/false): Show API request details
 
         Examples:
           llm 1min options list              # View all settings
           llm 1min options set web_search true
           llm 1min options set --model sonar num_of_site 10
+          llm 1min options migrate           # Rename legacy keys (e.g. is_mixed)
         """
         pass
 
@@ -916,6 +1257,15 @@ def register_commands(cli):
           llm 1min options set num_of_site 5
           llm 1min options set --model sonar num_of_site 10
         """
+        legacy_renames = {"is_mixed": "history_mixed"}
+        if key in legacy_renames:
+            click.echo(
+                f"Error: '{key}' was renamed to '{legacy_renames[key]}' in v0.4.0. "
+                f"Use: llm 1min options set {legacy_renames[key]} {value}",
+                err=True,
+            )
+            return
+
         # Convert string value to appropriate type
         if value.lower() == "true":
             value = True
@@ -1120,3 +1470,60 @@ def register_commands(cli):
             click.echo(f"Imported options from {file}")
         except Exception as e:
             click.echo(f"Error: {e}", err=True)
+
+    @options_group.command(name="migrate")
+    def migrate_options():
+        """Rename legacy option keys in saved config.
+
+        Renames removed in v0.4.0:
+          is_mixed → history_mixed
+
+        Example:
+          llm 1min options migrate
+        """
+        legacy_renames = {"is_mixed": "history_mixed"}
+
+        if not _options_config.config_path.exists():
+            click.echo("No saved config to migrate.")
+            return
+
+        try:
+            with open(_options_config.config_path) as f:
+                config = json.load(f)
+        except Exception as e:
+            click.echo(f"Error reading config: {e}", err=True)
+            return
+
+        changes = []
+
+        def rename_in(scope_name, options):
+            for old, new in legacy_renames.items():
+                if old in options:
+                    options[new] = options.pop(old)
+                    changes.append(f"{scope_name}: {old} → {new}")
+
+        defaults = config.get("defaults") or {}
+        if isinstance(defaults, dict):
+            rename_in("defaults", defaults)
+            config["defaults"] = defaults
+
+        models = config.get("models") or {}
+        if isinstance(models, dict):
+            for model_id, opts in models.items():
+                if isinstance(opts, dict):
+                    rename_in(f"models.{model_id}", opts)
+            config["models"] = models
+
+        if not changes:
+            click.echo("No legacy keys found. Config is up to date.")
+            return
+
+        try:
+            _options_config.save(config)
+        except Exception as e:
+            click.echo(f"Error writing config: {e}", err=True)
+            return
+
+        click.echo(f"Migrated {len(changes)} key(s):")
+        for change in changes:
+            click.echo(f"  {change}")

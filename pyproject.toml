@@ -1,7 +1,7 @@
 [project]
 name = "llm-1minai"
-version = "0.3.0"
-description = "LLM plugin providing access to 66+ AI models through 1min.ai API with web search, mixed context, and persistent options"
+version = "0.4.0"
+description = "LLM plugin providing access to 75+ AI models through 1min.ai API v2 (chat-with-ai endpoint) with SSE streaming, attachments, AI memory, brand voice, web search, and persistent options"
 readme = "README.md"
 authors = [{name = "gl0bal01"}]
 license = {text = "Apache-2.0"}
@@ -69,7 +69,7 @@ addopts = [
     "--cov=llm_1min",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=50"
+    "--cov-fail-under=64"
 ]
 
 [tool.coverage.run]

@@ -70,18 +70,18 @@ class TestOneMinModelExecution:
 
             # Verify web search params were included
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["webSearch"] is True
-            assert payload["promptObject"]["numOfSite"] == 5
-            assert payload["promptObject"]["maxWord"] == 1000
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 5
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["maxWord"] == 1000
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_execution_with_mixed_context(self, mock_get_key, mock_requests, mock_llm_prompt):
         """Test execution with mixed context enabled."""
         mock_get_key.return_value = "test-api-key"
-        mock_llm_prompt.options.is_mixed = True
+        mock_llm_prompt.options.history_mixed = True
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
@@ -97,10 +97,10 @@ class TestOneMinModelExecution:
 
             # Verify is_mixed was included
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["isMixed"] is True
+            assert payload["promptObject"]["settings"]["historySettings"]["isMixed"] is True
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_execution_with_code_generator_type(self, mock_get_key, mock_requests, mock_llm_prompt):
@@ -162,10 +162,10 @@ class TestOptionPriorityMerging:
 
             # Verify CLI value was used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["webSearch"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_per_model_options_override_global(
@@ -193,11 +193,13 @@ class TestOptionPriorityMerging:
 
             # Verify per-model value was used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["webSearch"] is True
-            assert payload["promptObject"]["numOfSite"] == 10  # Per-model value
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
+            assert (
+                payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 10
+            )  # Per-model value
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_global_defaults_used_when_no_overrides(
@@ -224,11 +226,11 @@ class TestOptionPriorityMerging:
 
             # Verify global values were used
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["webSearch"] is True
-            assert payload["promptObject"]["numOfSite"] == 7
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 7
 
 
 class TestConversationManagement:
@@ -350,8 +352,8 @@ class TestOptionsValidation:
     def test_conversation_type_valid(self):
         """Test valid conversation types."""
         options = llm_1min.OneMinModel.Options()
-        options.conversation_type = "CHAT_WITH_AI"
-        assert options.conversation_type == "CHAT_WITH_AI"
+        options.conversation_type = "UNIFY_CHAT_WITH_AI"
+        assert options.conversation_type == "UNIFY_CHAT_WITH_AI"
 
         options.conversation_type = "CODE_GENERATOR"
         assert options.conversation_type == "CODE_GENERATOR"

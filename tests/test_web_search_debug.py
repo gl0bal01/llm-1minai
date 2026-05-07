@@ -54,19 +54,19 @@ class TestWebSearchDebug:
                 print("=" * 60)
 
             # Verify
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
             print("\n" + "=" * 60)
             print("VERIFICATION:")
-            print(f"✓ webSearch in promptObject: {'webSearch' in payload['promptObject']}")
-            if "webSearch" in payload["promptObject"]:
-                print(f"✓ webSearch value: {payload['promptObject']['webSearch']}")
-                print(f"✓ numOfSite value: {payload['promptObject']['numOfSite']}")
+            ws = payload["promptObject"].get("settings", {}).get("webSearchSettings", {})
+            print(f"✓ webSearchSettings present: {bool(ws)}")
+            if ws:
+                print(f"✓ webSearch value: {ws.get('webSearch')}")
+                print(f"✓ numOfSite value: {ws.get('numOfSite')}")
             print("=" * 60 + "\n")
 
-            assert "webSearch" in payload["promptObject"]
-            assert payload["promptObject"]["webSearch"] is True
+            assert ws.get("webSearch") is True
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_show_payload_without_web_search(
@@ -92,7 +92,7 @@ class TestWebSearchDebug:
 
             # Show the actual payload
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
             print(f"\n{'=' * 60}")
@@ -102,10 +102,14 @@ class TestWebSearchDebug:
 
             print("\n" + "=" * 60)
             print("VERIFICATION:")
-            print(f"✓ webSearch in promptObject: {'webSearch' in payload['promptObject']}")
+            print(
+                f"✓ webSearch in promptObject: {'webSearchSettings' in payload['promptObject'].get('settings', {})}"
+            )
             print("=" * 60 + "\n")
 
-            assert "webSearch" not in payload["promptObject"]
+            assert "settings" not in payload["promptObject"] or "webSearchSettings" not in payload[
+                "promptObject"
+            ].get("settings", {})
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_show_option_merging_priority(
@@ -139,16 +143,20 @@ class TestWebSearchDebug:
                 )
             )
 
-            features_call = [call for call in mock_post.call_args_list if "features" in call[0][0]][
-                0
-            ]
+            features_call = [
+                call for call in mock_post.call_args_list if "chat-with-ai" in call[0][0]
+            ][0]
             payload = features_call[1]["json"]
 
             print("\n" + "=" * 60)
             print("ACTUAL RESULT:")
-            print(f"  - webSearch: {payload['promptObject']['webSearch']}")
-            print(f"  - numOfSite: {payload['promptObject']['numOfSite']}")
+            print(
+                f"  - webSearch: {payload['promptObject']['settings']['webSearchSettings']['webSearch']}"
+            )
+            print(
+                f"  - numOfSite: {payload['promptObject']['settings']['webSearchSettings']['numOfSite']}"
+            )
             print("=" * 60 + "\n")
 
-            assert payload["promptObject"]["webSearch"] is True
-            assert payload["promptObject"]["numOfSite"] == 7
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 7

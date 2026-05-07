@@ -58,6 +58,37 @@ class TestCLICommandInvocation:
             )
 
             assert result is False
+            # Mapping should remain intact when remote delete fails.
+            assert llm_1min._conversation_mapping["test-model"] == "test-uuid"
+
+    def test_clear_conversation_uses_exact_model_match(self, mock_requests):
+        """Test clear_conversation does not use risky substring matching."""
+        llm_1min._conversation_mapping["1min/gpt-4o"] = "uuid-gpt4o"
+        llm_1min._conversation_mapping["1min/gpt-4"] = "uuid-gpt4"
+
+        with patch("requests.delete") as mock_delete:
+            mock_delete.return_value = Mock(status_code=204)
+            result = llm_1min.clear_conversation(model_id="1min/gpt-4", api_key="test-key")
+
+            assert result is True
+            assert "1min/gpt-4" not in llm_1min._conversation_mapping
+            # Must not accidentally clear the gpt-4o mapping.
+            assert llm_1min._conversation_mapping["1min/gpt-4o"] == "uuid-gpt4o"
+
+    def test_clear_conversation_removes_all_keys_for_uuid(self, mock_requests):
+        """Test clear_conversation removes all local keys pointing to a deleted UUID."""
+        llm_1min._conversation_mapping["1min/gpt-4o"] = "shared-uuid"
+        llm_1min._conversation_mapping["conv-abc_1min/gpt-4o"] = "shared-uuid"
+        llm_1min._conversation_mapping["other-model"] = "other-uuid"
+
+        with patch("requests.delete") as mock_delete:
+            mock_delete.return_value = Mock(status_code=204)
+            result = llm_1min.clear_conversation(model_id="1min/gpt-4o", api_key="test-key")
+
+            assert result is True
+            assert "1min/gpt-4o" not in llm_1min._conversation_mapping
+            assert "conv-abc_1min/gpt-4o" not in llm_1min._conversation_mapping
+            assert llm_1min._conversation_mapping["other-model"] == "other-uuid"
 
     def test_clear_all_conversations_function(self, mock_requests):
         """Test clear_all_conversations function."""
@@ -94,6 +125,20 @@ class TestCLICommandInvocation:
             # Should return count of successfully deleted
             assert result >= 0
 
+    def test_clear_all_conversations_deduplicates_uuids(self, mock_requests):
+        """Test clear_all_conversations sends one delete per unique UUID."""
+        llm_1min._conversation_mapping["model1"] = "shared-uuid"
+        llm_1min._conversation_mapping["conv1_model1"] = "shared-uuid"
+        llm_1min._conversation_mapping["model2"] = "other-uuid"
+
+        with patch("requests.delete") as mock_delete:
+            mock_delete.return_value = Mock(status_code=204)
+            result = llm_1min.clear_all_conversations(api_key="test-key")
+
+            assert result == 2
+            assert mock_delete.call_count == 2
+            assert llm_1min._conversation_mapping == {}
+
     def test_get_active_conversations_returns_dict(self):
         """Test get_active_conversations returns correct structure."""
         # Add some test conversations
@@ -117,12 +162,12 @@ class TestModelExecutionEdgeCases:
         """Test execution with all advanced options enabled."""
         mock_get_key.return_value = "test-api-key"
 
-        # Enable all options
-        mock_llm_prompt.options.conversation_type = "CODE_GENERATOR"
+        # Enable all chat-path options
+        mock_llm_prompt.options.conversation_type = "UNIFY_CHAT_WITH_AI"
         mock_llm_prompt.options.web_search = True
         mock_llm_prompt.options.num_of_site = 10
         mock_llm_prompt.options.max_word = 2000
-        mock_llm_prompt.options.is_mixed = True
+        mock_llm_prompt.options.history_mixed = True
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
@@ -139,13 +184,13 @@ class TestModelExecutionEdgeCases:
 
             # Verify all options were passed
             call_args = mock_post.call_args_list
-            features_call = [call for call in call_args if "features" in call[0][0]][0]
+            features_call = [call for call in call_args if "chat-with-ai" in call[0][0]][0]
             payload = features_call[1]["json"]
 
-            assert payload["promptObject"]["webSearch"] is True
-            assert payload["promptObject"]["numOfSite"] == 10
-            assert payload["promptObject"]["maxWord"] == 2000
-            assert payload["promptObject"]["isMixed"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["webSearch"] is True
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["numOfSite"] == 10
+            assert payload["promptObject"]["settings"]["webSearchSettings"]["maxWord"] == 2000
+            assert payload["promptObject"]["settings"]["historySettings"]["isMixed"] is True
 
     @patch("llm_1min.OneMinModel.get_key")
     def test_execute_updates_conversation_mapping(
@@ -348,8 +393,8 @@ class TestOptionsValidation:
         """Test that conversation_type accepts valid values."""
         options = llm_1min.OneMinModel.Options()
 
-        options.conversation_type = "CHAT_WITH_AI"
-        assert options.conversation_type == "CHAT_WITH_AI"
+        options.conversation_type = "UNIFY_CHAT_WITH_AI"
+        assert options.conversation_type == "UNIFY_CHAT_WITH_AI"
 
         options.conversation_type = "CODE_GENERATOR"
         assert options.conversation_type == "CODE_GENERATOR"
@@ -364,11 +409,11 @@ class TestOptionsValidation:
         options.web_search = False
         assert options.web_search is False
 
-        options.is_mixed = True
-        assert options.is_mixed is True
+        options.history_mixed = True
+        assert options.history_mixed is True
 
-        options.is_mixed = False
-        assert options.is_mixed is False
+        options.history_mixed = False
+        assert options.history_mixed is False
 
     def test_max_word_accepts_integer(self):
         """Test that max_word accepts integer values."""
@@ -425,11 +470,17 @@ class TestAdditionalCoverage:
         prompt = Mock()
         prompt.prompt = "Test"
         prompt.options = Mock()
-        prompt.options.conversation_type = "CHAT_WITH_AI"
+        prompt.options.conversation_type = "UNIFY_CHAT_WITH_AI"
         prompt.options.web_search = None  # Should use config value
         prompt.options.num_of_site = None  # Should use config value
         prompt.options.max_word = 500
-        prompt.options.is_mixed = False
+        prompt.options.history_mixed = False
+        prompt.options.history_limit = 10
+        prompt.options.with_memories = False
+        prompt.options.brand_voice_id = None
+        prompt.options.images = None
+        prompt.options.files = None
+        prompt.options.debug = False
 
         model = llm_1min.OneMinModel("1min/gpt-4o", "gpt-4o", "GPT-4o")
 
@@ -476,11 +527,16 @@ class TestAdditionalCoverage:
         """Test Options class has correct defaults."""
         options = llm_1min.OneMinModel.Options()
 
-        assert options.conversation_type == "CHAT_WITH_AI"
+        assert options.conversation_type == "UNIFY_CHAT_WITH_AI"
         assert options.web_search is False
         assert options.num_of_site == 3
-        assert options.max_word == 500
-        assert options.is_mixed is False
+        assert options.max_word == 1000
+        assert options.history_mixed is False
+        assert options.history_limit == 10
+        assert options.with_memories is False
+        assert options.brand_voice_id is None
+        assert options.images is None
+        assert options.files is None
 
     def test_options_config_multiple_models(self, mock_config_path):
         """Test managing options for multiple models."""

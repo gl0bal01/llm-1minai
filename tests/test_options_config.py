@@ -258,3 +258,60 @@ class TestOptionsConfigIntegration:
 
         model_opts = config.get_model_options("sonar")
         assert model_opts["num_of_site"] == 10
+
+
+class TestLegacyOptionRejection:
+    """v0.4.0 hard-break: saved configs with removed keys must surface a clear error."""
+
+    def test_load_rejects_is_mixed_in_defaults(self, mock_config_path):
+        with open(mock_config_path, "w") as f:
+            json.dump({"defaults": {"is_mixed": True}, "models": {}}, f)
+
+        config = llm_1min.OptionsConfig()
+        try:
+            config.load()
+            raise AssertionError("expected ValueError on legacy is_mixed key")
+        except ValueError as e:
+            msg = str(e)
+            assert "is_mixed" in msg
+            assert "history_mixed" in msg
+            assert "defaults" in msg
+
+    def test_load_rejects_is_mixed_in_model_scope(self, mock_config_path):
+        payload = {"defaults": {}, "models": {"gpt-4o": {"is_mixed": True}}}
+        with open(mock_config_path, "w") as f:
+            json.dump(payload, f)
+
+        config = llm_1min.OptionsConfig()
+        try:
+            config.load()
+            raise AssertionError("expected ValueError on legacy is_mixed key")
+        except ValueError as e:
+            assert "models.gpt-4o" in str(e)
+
+    def test_load_accepts_history_mixed(self, mock_config_path):
+        with open(mock_config_path, "w") as f:
+            json.dump({"defaults": {"history_mixed": True}, "models": {}}, f)
+
+        config = llm_1min.OptionsConfig()
+        result = config.load()
+        assert result["defaults"]["history_mixed"] is True
+
+
+class TestNewOptionsRoundTrip:
+    """v0.4.0 new options must round-trip through save/load."""
+
+    def test_history_limit_round_trip(self, mock_config_path):
+        config = llm_1min.OptionsConfig()
+        config.set_option("history_limit", 25)
+        assert config.get_defaults()["history_limit"] == 25
+
+    def test_with_memories_round_trip(self, mock_config_path):
+        config = llm_1min.OptionsConfig()
+        config.set_option("with_memories", True, model_id="gpt-4o")
+        assert config.get_model_options("gpt-4o")["with_memories"] is True
+
+    def test_brand_voice_id_round_trip(self, mock_config_path):
+        config = llm_1min.OptionsConfig()
+        config.set_option("brand_voice_id", "voice-abc")
+        assert config.get_defaults()["brand_voice_id"] == "voice-abc"

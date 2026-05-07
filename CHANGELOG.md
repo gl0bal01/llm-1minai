@@ -5,6 +5,81 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-07
+
+### BREAKING
+
+- **New chat endpoint**: chat now POSTs to `https://api.1min.ai/api/chat-with-ai`
+  with `type=UNIFY_CHAT_WITH_AI`. The legacy `/api/features` path is retained
+  only for `CODE_GENERATOR`. Conversations are created with
+  `type=UNIFY_CHAT_WITH_AI`; the legacy `CHAT_WITH_AI` type is gone.
+- **Nested `promptObject.settings`**: web search, history mixing, and memory
+  are now nested under `settings.webSearchSettings`, `settings.historySettings`,
+  and `settings.withMemories`. The flat `webSearch` / `numOfSite` / `maxWord` /
+  `isMixed` keys at the top of `promptObject` are no longer sent for chat.
+- **Option rename**: `is_mixed` → `history_mixed`. Saved configs containing
+  `is_mixed` raise an actionable error on load. Run
+  `llm 1min options migrate` to auto-rename, or
+  `llm 1min options unset is_mixed && llm 1min options set history_mixed <value>`.
+- **`max_word` default changed**: 500 → 1000, matching the new API default.
+- **Removed models** (no longer in the 1min.ai catalog):
+  `o1-mini`, `claude-3-haiku-20240307`, `claude-3-5-haiku-20241022`,
+  `claude-3-7-sonnet-20250219`, `gemini-1.5-pro`, `gemini-2.0-flash`,
+  `gemini-2.0-flash-lite`, `grok-2`, `pixtral-12b`,
+  `meta/meta-llama-3.1-405b-instruct`, `sonar-reasoning`.
+
+### Added
+
+- **SSE streaming** on `/api/chat-with-ai`: `can_stream=True`. Parses `content`,
+  `result`, `done`, and `error` events.
+- **Attachments**: new `images` and `files` options accept comma-separated
+  asset keys / file IDs from the 1min.ai Asset API and serialize to
+  `promptObject.attachments.{images,files}`.
+- **AI memory**: `with_memories` option (boolean) maps to
+  `settings.withMemories`.
+- **Brand voice**: `brand_voice_id` option maps to payload-root `brandVoiceId`.
+- **History controls**: `history_limit` option (1-50) maps to
+  `settings.historySettings.historyMessageLimit`.
+- **`llm 1min options migrate`** subcommand renames legacy keys
+  (`is_mixed` → `history_mixed`) in saved configs.
+- **New providers and models**:
+  - Anthropic: Claude 4.6 / 4.5 Sonnet, Claude 4.6 / 4.5 / 4.1 Opus,
+    Claude 4.5 Haiku
+  - OpenAI: GPT-5.1, GPT-5.1 Codex, GPT-5.1 Codex Mini, GPT-5.2, GPT-5.2 Pro,
+    GPT-5.4, GPT-5.4 Mini / Nano / Pro, o3, o3 Pro, o3 Deep Research,
+    o4 Mini Deep Research
+  - Google: Gemini 3.1 Pro / Flash Lite (Preview), Gemini 3 Flash (Preview)
+  - Alibaba (new provider): Qwen3 Max / VL Plus / VL Flash / Coder Plus /
+    Coder Flash, Qwen Max / Plus / Flash / VL Max / VL Plus
+  - Mistral: Mistral Medium 3.1, Magistral Small / Medium 1.2, Ministral 14B
+  - Perplexity: Sonar Pro, Sonar Deep Research
+- **Tag display in `llm 1min models`**: code-eligible and web-aware models
+  show `[code]` / `[web]` tags derived from `MODEL_DEFAULTS`.
+
+### Changed
+
+- `OneMinModel.execute` is bifurcated into `_execute_chat` (chat-with-ai +
+  optional SSE) and `_execute_feature` (CODE_GENERATOR via /api/features).
+- `llm 1min models` now derives the listing from `register_models()` —
+  single source of truth for model IDs and display names.
+- `MODEL_DEFAULTS` updated for the new code-focused models (Claude 4.5/4.6,
+  Qwen3 Coder, GPT-5.1 Codex) and web-aware models
+  (sonar variants, deep-research models).
+- Conversation creation for chat models always uses `UNIFY_CHAT_WITH_AI`.
+
+### Migration guide
+
+Existing users with saved per-model or global config:
+
+```bash
+llm 1min options migrate          # rename is_mixed → history_mixed
+llm 1min options list             # confirm options after migration
+llm 1min models                   # see refreshed roster (75 models)
+```
+
+Existing scripts that pin removed model IDs need to switch to a current
+replacement. See `MODEL_SELECTION.md` for the full new roster.
+
 ## [0.3.0] - 2025-11-16
 
 ### Added
